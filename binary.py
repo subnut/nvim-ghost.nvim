@@ -23,6 +23,8 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self._ghost_responder()
         elif _path == "/version":
             self._version_responder()
+        elif _path == "/exit":
+            self._exit_responder()
 
     def _ghost_responder(self):
         self.send_response(200)
@@ -40,6 +42,14 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/plain")
         self.end_headers()
         self.wfile.write(BUILD_VERSION.encode("utf-8"))
+
+    def _exit_responder(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write("Exiting...".encode("utf-8"))
+        global running
+        running = False
 
 
 class GhostWebSocketHandler(WebSocket):
@@ -64,10 +74,10 @@ class Server:
         self.http_server = self._http_server()
         self.websocket_server = self._websocket_server()
         self.http_server_thread = threading.Thread(
-            target=self.http_server.serve_forever
+            target=self.http_server.serve_forever, daemon=True
         )
         self.websocket_server_thread = threading.Thread(
-            target=self.websocket_server.serve_forever
+            target=self.websocket_server.serve_forever, daemon=True
         )
 
     def _http_server(self):
@@ -93,3 +103,7 @@ ghost_port = ghost_port and ghost_port.isdigit() and int(ghost_port) or 4001
 servers = Server()
 servers.http_server_thread.start()
 servers.websocket_server_thread.start()
+running = True
+while running:
+    continue
+sys.exit()
