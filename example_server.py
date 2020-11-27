@@ -2,6 +2,7 @@ import http.server
 import random
 import socket
 import os
+from urllib import parse as urlparse
 
 # Get config from environment variables
 ghost_port = os.environ.get("GHOSTTEXT_SERVER_PORT") or 4001
@@ -14,6 +15,9 @@ class GhostGETRequestHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         global ghost_websocket
         ghost_websocket = self.create_ghost_websocket()
+        print(urlparse.urlparse(self.path))
+        print(urlparse.parse_qs(urlparse.urlparse(self.path).query))
+        # print(urlparse.parse_qsl(urlparse.urlparse(self.path)))
         self._ghost_responder()
 
     def _ghost_responder(self):

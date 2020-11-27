@@ -4,7 +4,12 @@ import socket
 import os
 
 # Get config from environment variables
-ghost_port = os.environ.get("GHOSTTEXT_SERVER_PORT") or 4001
+ghost_port: int = (
+    os.environ.get("GHOSTTEXT_SERVER_PORT")  # i.e is not None
+    and os.environ.get("GHOSTTEXT_SERVER_PORT").isdigit()
+    and int(os.environ.get("GHOSTTEXT_SERVER_PORT"))
+    or 4001
+)
 
 # Global objects to get replaced
 ghost_websocket = None

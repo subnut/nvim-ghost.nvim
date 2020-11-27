@@ -1,21 +1,13 @@
 # Echo Server Example
 
 from simple_websocket_server import WebSocketServer, WebSocket
-import time
-import multiprocessing
 
 ghost_websocket_connection_stack = []
 
 
 class SimpleEcho(WebSocket):
-    def __init__(self, *args, **kwargs):
-        self.handled_once = False
-        super().__init__(*args, **kwargs)
-
     def handle(self):
         print(self.data)
-        if len(self.data) != 0:
-            self.handled_once = True
 
     def connected(self):
         global ghost_websocket_connection_stack
@@ -23,7 +15,6 @@ class SimpleEcho(WebSocket):
         print(self.address, "connected")
         ghost_websocket_connection_stack.append(self)
         print(ghost_websocket_connection_stack)
-        multiprocessing.Process(target=start_timer, args=(self)).start()
 
     def handle_close(self):
         global ghost_websocket_connection_stack
@@ -41,13 +32,13 @@ class SimpleEcho(WebSocket):
         print(ghost_websocket_connection_stack)
 
 
-def start_timer(self):
-    while time.sleep(5) or True:
-        if not self.handled_once:
-            self.close()
+class GhostWebSocketServer(WebSocketServer):
+    def __init__(self, host, port, websocketclass, **kwargs):
+        self.port = port
+        return super().__init__(host, port, websocketclass, **kwargs)
 
 
-server = WebSocketServer("", 60000, SimpleEcho)
+server = GhostWebSocketServer("", 60000, SimpleEcho)
 try:
     server.serve_forever()
 except KeyboardInterrupt:
