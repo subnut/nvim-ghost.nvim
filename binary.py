@@ -5,37 +5,50 @@ import socket
 import http.server
 import urllib.parse
 import threading
+import pynvim
 from simple_websocket_server import WebSocketServer, WebSocket
 
 BUILD_VERSION = "0.1.0.02"
 
 
 def _port_occupied(port):
+    """
+    If port is occupied, returns True. Else returns False
+
+    :param port int: port number to check
+    """
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socket_checker:
         return socket_checker.connect_ex(("localhost", port)) == 0
+
+
+def _check_nvim_socket(socket):
+    if socket is None:
+        sys.exit("NVIM_LISTEN_ADDRESS environment variable not set")
+    if not os.path.exists(socket):
+        sys.exit("Specified socket does not exist.")
 
 
 class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_url = urllib.parse.urlparse(self.path)
-        _path = parsed_url.path
-        if _path == "/":
-            self._ghost_responder()
-        elif _path == "/version":
-            self._version_responder()
-        elif _path == "/exit":
-            self._exit_responder()
+        path = parsed_url.path
+        responses = {
+            "/": self._ghost_responder,
+            "/version": self._version_responder,
+            "/exit": self._exit_responder,
+        }
+        if path in responses:
+            responses[path]()
 
     def _ghost_responder(self):
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
-        _writestr = f"""{{
+        _str = f"""{{
   "ProtocolVersion": 1,
   "WebSocketPort": {servers.websocket_server.port}
 }}"""
-        print(_writestr)
-        self.wfile.write(_writestr.encode("utf-8"))
+        self.wfile.write(_str.encode("utf-8"))
 
     def _version_responder(self):
         self.send_response(200)
@@ -48,8 +61,8 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/plain")
         self.end_headers()
         self.wfile.write("Exiting...".encode("utf-8"))
-        global running
-        running = False
+        global RUNNING
+        RUNNING = False
 
 
 class GhostWebSocketHandler(WebSocket):
@@ -97,13 +110,23 @@ class Server:
                 )
 
 
-ghost_port = os.environ.get("GHOSTTEXT_SERVER_PORT")
-ghost_port = ghost_port and ghost_port.isdigit() and int(ghost_port) or 4001
+class Neovim:
+    def __init__(self, address):
+        self.address = address
+        self.handle = pynvim.attach("socket", path=address)
+
+
+ghost_port = os.environ.get("GHOSTTEXT_SERVER_PORT", 4001)
+neovim_socket = os.environ.get("NVIM_LISTEN_ADDRESS")
+
+_check_nvim_socket(neovim_socket)
+neovim = Neovim(neovim_socket)
+
 
 servers = Server()
 servers.http_server_thread.start()
 servers.websocket_server_thread.start()
-running = True
-while running:
+RUNNING = True
+while RUNNING:
     continue
 sys.exit()
