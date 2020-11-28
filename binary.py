@@ -1,5 +1,6 @@
 import os
 import sys
+import json
 import random
 import socket
 import requests
@@ -228,10 +229,21 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
 class GhostWebSocketHandler(WebSocket):
     def handle(self):
-        print(self.data)
+        print(json.loads(self.data))
+        data = json.loads(self.data)
+        data_syntax = data["syntax"]
+        data_text: str = data["text"]
+        data_text_split = data_text.split("\n")
+        handle = self.neovim_handle
+        buffer = self.buffer
+        handle.command(f"call nvim_buf_set_lines({buffer},0,-1,0,{data_text_split})")
+        handle.command(f"call nvim_buf_set_option({buffer},'filetype','{data_syntax}')")
 
     def connected(self):
         self.address = neovim_focused_address
+        self.neovim_handle = pynvim.attach("socket", path=neovim_focused_address)
+        self.buffer = self.neovim_handle.command_output("echo nvim_create_buf(1,1)")
+        self.neovim_handle.command(f"tabe | {self.buffer}buffer")
         global NEOVIM_OBJECTS
         if not NEOVIM_OBJECTS.__contains__(neovim_focused_address):
             NEOVIM_OBJECTS[neovim_focused_address] = []
@@ -242,6 +254,8 @@ class GhostWebSocketHandler(WebSocket):
     def handle_close(self):
         global NEOVIM_OBJECTS
         NEOVIM_OBJECTS[self.address].remove(self)
+        self.neovim_handle.command("{buffer}bdelete")
+        self.neovim_handle.close()
         print(NEOVIM_OBJECTS)
 
 
