@@ -13,7 +13,6 @@ from simple_websocket_server import WebSocketServer, WebSocket
 
 BUILD_VERSION = "0.1.0.02"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
-neovim_focused_address = None  # Need to be defined before Neovim class, else NameError
 
 
 def _port_occupied(port):
@@ -58,7 +57,7 @@ def _store_port():
         file.write(str(servers.http_server.server_port))
 
 
-def _stop_if_already_running():
+def _exit_script_if_server_already_running():
     if _detect_running_port():
         running_port = _detect_running_port()
         if running_port == str(ghost_port):
@@ -71,34 +70,48 @@ def _stop_if_already_running():
                 break
 
 
+neovim_focused_address = None  # Need to be defined before Neovim class, else NameError
+start_server = False
+
+
 class ArgParser:
     def __init__(self):
-        self.argument_handlers = {
+        self.argument_handlers_data = {
             "--focus": self._focus,
-            "--closed": self._closed,
+            "--close": self._close,
             "--port": self._port,
         }
+        self.argument_handlers_nodata = {
+            "--version": self._version,
+            "--help": self._help,
+            "--start-server": self._start,
+        }
+        self.server_requests = []
 
     def parse_args(self, args=sys.argv[1:]):
         for index, argument in enumerate(args):
-            if argument == "--version":
-                self._version()
             if argument.startswith("--"):
-                if index + 1 >= len(args):
-                    sys.exit(f"Argument {argument} needs a value.")
-                self.argument_handlers[argument](args[index + 1])
+                if argument in self.argument_handlers_nodata:
+                    self.argument_handlers_nodata[argument]()
+                if argument in self.argument_handlers_data:
+                    if index + 1 >= len(args):
+                        sys.exit(f"Argument {argument} needs a value.")
+                    self.argument_handlers_data[argument](args[index + 1])
 
     def _version(self):
         print(BUILD_VERSION)
         sys.exit()
 
-    def _focus(self, address: str):
-        global neovim_focused_address
-        neovim_focused_address = address
+    def _help(self):
+        for item in self.argument_handlers_nodata:
+            print(item)
+        for item in self.argument_handlers_data:
+            print(item, "<data>")
+        sys.exit()
 
-    def _closed(self, address):
-        for item in NEOVIM_OBJECTS[address]:
-            item.close()
+    def _start(self):
+        global start_server
+        start_server = True
 
     def _port(self, port: str):
         if not port.isdigit():
@@ -106,18 +119,45 @@ class ArgParser:
         global ghost_port
         ghost_port = int(port)
 
+    def focus(self, address):
+        global neovim_focused_address
+        neovim_focused_address = address
+
+    def _focus(self, address):
+        self.focus(address)
+        self.server_requests.append(f"/focus?{address}")
+
+    def close(self, address):
+        for item in NEOVIM_OBJECTS[address]:
+            item.close()
+
+    def _close(self, address):
+        self.close(address)
+        self.server_requests.append(f"/close?{address}")
+
 
 class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
-        responses = {
+        query = parsed_url.query
+
+        responses_nodata = {
             "/": self._ghost_responder,
             "/version": self._version_responder,
             "/exit": self._exit_responder,
         }
-        if path in responses:
-            responses[path]()
+
+        responses_data = {
+            "/focus": self._focus_responder,
+            "/close": self._close_responder,
+        }
+
+        if path in responses_nodata:
+            responses_nodata[path]()
+
+        if path in responses_data:
+            responses_data[path](query)
 
     def _ghost_responder(self):
         self.send_response(200)
@@ -142,6 +182,22 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.write("Exiting...".encode("utf-8"))
         global RUNNING
         RUNNING = False
+
+    def _focus_responder(self, address):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(address.encode("utf-8"))
+        global argparser
+        argparser.focus(address)
+
+    def _close_responder(self, address):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(address.encode("utf-8"))
+        global argparser
+        argparser.close(address)
 
 
 class GhostWebSocketHandler(WebSocket):
@@ -219,13 +275,17 @@ argparser.parse_args()
 if neovim_focused_address is None:
     sys.exit("NVIM_LISTEN_ADDRESS environment variable not set.")
 
-_stop_if_already_running()
-servers = Server()
-servers.http_server_thread.start()
-servers.websocket_server_thread.start()
-_store_port()
-RUNNING = True
-while RUNNING:
-    continue
-os.remove(TEMP_FILEPATH)  # Remove port
-sys.exit()
+if start_server:
+    _exit_script_if_server_already_running()
+    servers = Server()
+    servers.http_server_thread.start()
+    servers.websocket_server_thread.start()
+    _store_port()
+    RUNNING = True
+    while RUNNING:
+        continue
+    os.remove(TEMP_FILEPATH)  # Remove port
+    sys.exit()
+
+elif not _detect_running_port():
+    sys.exit("Server not running and --start-server not specified")
