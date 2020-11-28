@@ -17,6 +17,7 @@ class GhostGETRequestHandler(http.server.BaseHTTPRequestHandler):
         ghost_websocket = self.create_ghost_websocket()
         print(urlparse.urlparse(self.path))
         print(urlparse.parse_qs(urlparse.urlparse(self.path).query))
+        print(urlparse.parse_qsl(urlparse.urlparse(self.path).query))
         # print(urlparse.parse_qsl(urlparse.urlparse(self.path)))
         self._ghost_responder()
 
