@@ -14,6 +14,7 @@ from simple_websocket_server import WebSocketServer, WebSocket
 BUILD_VERSION = "0.1.0.02"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS = os.name == "nt"
+PERSIST = False  # Permanent daemon mode (aka. forking) not implemented yet.
 
 
 def _port_occupied(port):
@@ -32,8 +33,8 @@ def _detect_running_port():
         with open(TEMP_FILEPATH) as file:
             old_port = file.read()
         try:
-            response = requests.get(f"http://localhost:{old_port}")
-            if response.ok:
+            response = requests.get(f"http://localhost:{old_port}/is_ghost_binary")
+            if response.ok and response.text == "True":
                 return old_port
         except requests.exceptions.ConnectionError:
             return False
@@ -41,8 +42,9 @@ def _detect_running_port():
 
 
 def _get_running_version():
-    if _detect_running_port():
-        response = requests.get(f"http://localhost:{_detect_running_port()}/version")
+    port = _detect_running_port()
+    if port:
+        response = requests.get(f"http://localhost:{port}/version")
         if response.ok:
             return response.text
 
@@ -141,9 +143,13 @@ class ArgParser:
         self.server_requests.append(f"/focus?{address}")
 
     def close(self, address):
+        global NEOVIM_OBJECTS
         for item in NEOVIM_OBJECTS[address]:
             item.close()
         del NEOVIM_OBJECTS[address]
+        if not PERSIST and len(NEOVIM_OBJECTS) == 0:
+            global RUNNING
+            RUNNING = False
 
     def _close(self, address):
         self.server_requests.append(f"/close?{address}")
@@ -159,6 +165,7 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             "/": self._ghost_responder,
             "/version": self._version_responder,
             "/exit": self._exit_responder,
+            "/is_ghost_binary": self._sanityCheck_responder,
         }
 
         responses_data = {
@@ -195,6 +202,12 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.write("Exiting...".encode("utf-8"))
         global RUNNING
         RUNNING = False
+
+    def _sanityCheck_responder(self):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write("True".encode("utf-8"))
 
     def _focus_responder(self, address):
         self.send_response(200)
@@ -235,7 +248,7 @@ class GhostWebSocketHandler(WebSocket):
 class GhostWebSocketServer(WebSocketServer):
     def __init__(self, host, port, websocketclass, **kwargs):
         self.port = port
-        return super().__init__(host, port, websocketclass, **kwargs)
+        super().__init__(host, port, websocketclass, **kwargs)
 
 
 class Server:
@@ -269,12 +282,9 @@ class Server:
 class Neovim:
     def __init__(self, address=neovim_focused_address):
         self.address = address
-        self._check_nvim_socket()
-        self.handle = pynvim.attach("socket", path=address)
 
-    def _check_nvim_socket(self):
-        if not _check_if_socket(self.address):
-            sys.exit("Specified neovim socket does not exist")
+    def get_handle(self):
+        return pynvim.attach("socket", path=self.address)
 
 
 NEOVIM_OBJECTS: Dict[str, List[GhostWebSocketHandler]] = {}
