@@ -13,6 +13,7 @@ from simple_websocket_server import WebSocketServer, WebSocket
 
 BUILD_VERSION = "0.1.0.02"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
+WINDOWS = os.name == "nt"
 
 
 def _port_occupied(port):
@@ -68,6 +69,18 @@ def _exit_script_if_server_already_running():
         while True:
             if not _port_occupied(running_port):
                 break
+
+
+def _check_if_socket(filepath):
+    if WINDOWS:
+        _dir = os.path.dirname(filepath)
+        _filename = filepath.split(_dir)[1]
+        return os.listdir(_dir).__contains__(_filename)
+    else:
+        if os.path.exists(filepath):
+            if os.path.stat.S_ISSOCK(os.stat(filepath).st_mode):
+                return True
+    return False
 
 
 neovim_focused_address = None  # Need to be defined before Neovim class, else NameError
@@ -260,7 +273,7 @@ class Neovim:
         self.handle = pynvim.attach("socket", path=address)
 
     def _check_nvim_socket(self):
-        if not os.path.exists(self.address):
+        if not _check_if_socket(self.address):
             sys.exit("Specified neovim socket does not exist")
 
 
