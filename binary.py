@@ -130,9 +130,9 @@ class ArgParser:
     def close(self, address):
         for item in NEOVIM_OBJECTS[address]:
             item.close()
+        del NEOVIM_OBJECTS[address]
 
     def _close(self, address):
-        self.close(address)
         self.server_requests.append(f"/close?{address}")
 
 
@@ -289,3 +289,10 @@ if start_server:
 
 elif not _detect_running_port():
     sys.exit("Server not running and --start-server not specified")
+
+ghost_port = _detect_running_port()
+if len(argparser.server_requests) > 0:
+    for url in argparser.server_requests:
+        request = requests.get(f"http://localhost:{ghost_port}{url}")
+        if request.ok:
+            print("Sent", url)
