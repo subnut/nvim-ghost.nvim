@@ -273,7 +273,7 @@ class GhostWebSocket(WebSocket):
     def handle_close(self):
         global WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS
         WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[self.address].remove(self)
-        self.neovim_handle.command("{buffer}bdelete")
+        self.neovim_handle.command(f"bdelete {self.buffer}")
         self.neovim_handle.close()
         print(WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS)
         del WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[self.address][self.buffer]
