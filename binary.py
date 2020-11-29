@@ -106,6 +106,7 @@ class ArgParser:
         self.argument_handlers_nodata = {
             "--start-server": self._start,
             "--version": self._version,
+            "--focus": self._focus,
             "--help": self._help,
             "--kill": self._kill,
         }
@@ -114,12 +115,17 @@ class ArgParser:
     def parse_args(self, args=sys.argv[1:]):
         for index, argument in enumerate(args):
             if argument.startswith("--"):
-                if argument in self.argument_handlers_nodata:
-                    self.argument_handlers_nodata[argument]()
+                # First parse data_args
+                # Then parse nodata_args
+                # Because some data_args may also work as nodata_args
+                # i.e. they have some default value
+                # e.g. --focus
                 if argument in self.argument_handlers_data:
                     if index + 1 >= len(args):
                         sys.exit(f"Argument {argument} needs a value.")
                     self.argument_handlers_data[argument](args[index + 1])
+                if argument in self.argument_handlers_nodata:
+                    self.argument_handlers_nodata[argument]()
 
     def _version(self):
         print(BUILD_VERSION)
@@ -142,10 +148,11 @@ class ArgParser:
         global ghost_port
         ghost_port = int(port)
 
-    def _focus(self, address):
-        global neovim_focused_address
-        neovim_focused_address = address
-        self.server_requests.append(f"/focus?focus={address}")
+    def _focus(self, address=os.environ.get("NVIM_LISTEN_ADDRESS")):
+        if address is not None:
+            global neovim_focused_address
+            neovim_focused_address = address
+            self.server_requests.append(f"/focus?focus={address}")
 
     def _window_closed(self, address):
         self.server_requests.append(f"/window-closed?window={address}")
