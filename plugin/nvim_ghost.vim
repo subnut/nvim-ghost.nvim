@@ -9,14 +9,17 @@ if !filereadable(g:nvim_ghost_binary_path )
 	finish
 endif
 
-function s:logger(type,strlist)
+function s:logger(data,type)
 	if !g:nvim_ghost_logging_enabled
 		return
 	endif
 	if a:type ==# 'stderr'
 		echohl WarningMsg
 	endif
-	for line in a:strlist
+	for line in a:data
+		if len(line) == 0
+			continue
+		endif
 		echom '[nvim-ghost] ' . a:type . ': ' . line
 	endfor
 	if a:type ==# 'stderr'
