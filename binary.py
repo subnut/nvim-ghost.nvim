@@ -265,8 +265,14 @@ class GhostWebSocket(WebSocket):
         data_text_split = data_text.split("\n")
         handle = self.neovim_handle
         buffer = self.buffer
+        self.neovim_handle.command(
+            f"call nvim_ghost#delete_buffer_autocmds({self.buffer})"
+        )
         handle.command(f"call nvim_buf_set_lines({buffer},0,-1,0,{data_text_split})")
         handle.command(f"call nvim_buf_set_option({buffer},'filetype','{data_syntax}')")
+        self.neovim_handle.command(
+            f"call nvim_ghost#setup_buffer_autocmds({self.buffer})"
+        )
 
     def connected(self):
         self.address = neovim_focused_address
@@ -276,10 +282,7 @@ class GhostWebSocket(WebSocket):
             f"call nvim_buf_set_var({self.buffer}, 'nvim_ghost_timer', 0)"
         )
         self.neovim_handle.command(
-            f"au TextChanged,TextChangedI,TextChangedP <buffer={self.buffer}> call nvim_ghost#update_buffer({self.buffer})"
-        )
-        self.neovim_handle.command(
-            f"au BufDelete <buffer={self.buffer}> call nvim_ghost#notify_buffer_deleted({self.buffer})"
+            f"call nvim_ghost#setup_buffer_autocmds({self.buffer})"
         )
         self.neovim_handle.command(f"tabe | {self.buffer}buffer")
         global WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS
