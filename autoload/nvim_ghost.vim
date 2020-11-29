@@ -3,9 +3,6 @@ if exists('g:loaded_nvim_ghost')
 endif
 let g:loaded_nvim_ghost = 1
 
-let g:nvim_ghost_debounce = get(g:,'nvim_ghost_debounce', 200)
-let g:nvim_ghost_binary_path  =  expand('<sfile>:h:h') . (has('win32') ? '/binary.exe' :  '/binary')
-
 if !filereadable(g:nvim_ghost_binary_path )
 	echohl ErrorMsg
 	echom 'nvim-ghost binary not readable'
@@ -35,7 +32,6 @@ fun! nvim_ghost#request_focus()
 endfun
 
 fun! nvim_ghost#notify_buffer_deleted(bufnr)
-	let l:text = join(getbufline(a:bufnr,1,'$'),'\n')
 	call nvim_ghost#request_focus()
 	let l:arguments = ' --buffer-closed ' . a:bufnr
 	let l:job = jobstart(g:nvim_ghost_binary_path  . l:arguments, {'on_stdout':{j,d,e->execute('echom  "nvim-ghost:" "' . d[0] . '"')}})
@@ -53,4 +49,3 @@ fun! nvim_ghost#delete_buffer_autocmds(bufnr)
 	exe 'au! nvim_ghost_'.a:bufnr
 	exe 'augroup END'
 endfun
-
