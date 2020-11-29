@@ -19,7 +19,7 @@ BUILD_VERSION = "0.1.0.02"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS = os.name == "nt"
 PERSIST = False  # Permanent daemon mode (aka. forking) not implemented yet.
-POLL_INTERVAL: float = 1  # Server poll interval in seconds
+POLL_INTERVAL: float = 5  # Server poll interval in seconds
 
 
 def _port_occupied(port):
@@ -272,16 +272,16 @@ class GhostWebSocket(WebSocket):
         self.address = neovim_focused_address
         self.neovim_handle = pynvim.attach("socket", path=neovim_focused_address)
         self.buffer = self.neovim_handle.command_output("echo nvim_create_buf(1,1)")
-        self.neovim_handle.command(f"tabe | {self.buffer}buffer")
+        self.neovim_handle.command(
+            f"call nvim_buf_set_var({self.buffer}, 'nvim_ghost_timer', 0)"
+        )
         self.neovim_handle.command(
             f"au TextChanged,TextChangedI,TextChangedP <buffer={self.buffer}> call nvim_ghost#update_buffer({self.buffer})"
         )
         self.neovim_handle.command(
             f"au BufDelete <buffer={self.buffer}> call nvim_ghost#notify_buffer_deleted({self.buffer})"
         )
-        self.neovim_handle.command(
-            f"call nvim_buf_set_var({self.buffer}, 'nvim_ghost_timer', 0)"
-        )
+        self.neovim_handle.command(f"tabe | {self.buffer}buffer")
         global WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS
         if not WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS.__contains__(self.address):
             WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[self.address] = []
