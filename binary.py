@@ -19,7 +19,7 @@ BUILD_VERSION = "0.1.0.02"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS = os.name == "nt"
 PERSIST = False  # Permanent daemon mode (aka. forking) not implemented yet.
-POLL_INTERVAL: float = 5  # Server poll interval in seconds
+POLL_INTERVAL: float = (os.name == "nt") and 1 or 5  # Server poll interval in seconds
 
 
 def _port_occupied(port):
@@ -366,6 +366,7 @@ if start_server:
     servers = Server()
     servers.http_server_thread.start()
     servers.websocket_server_thread.start()
+    print("Servers started")
     _store_port()
     RUNNING = True
     while RUNNING:
