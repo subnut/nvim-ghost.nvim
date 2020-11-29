@@ -24,19 +24,19 @@ endfunction
 fun! nvim_ghost#send_buffer(bufnr)
 	call nvim_ghost#request_focus()
 	let l:arguments = ' --update-buffer-text ' . a:bufnr
-	let l:job = jobstart(g:nvim_ghost_binary_path  . l:arguments, s:joblog_arguments)
+	let l:job = jobstart(shellescape(g:nvim_ghost_binary_path)  . l:arguments, s:joblog_arguments)
 	call chansend(l:job, getbufline(a:bufnr,1,'$'))
 	call chanclose(l:job)
 endfun
 
 fun! nvim_ghost#request_focus()
-	call jobstart(g:nvim_ghost_binary_path  . ' --focus ' . $NVIM_LISTEN_ADDRESS)
+	call jobstart(shellescape(g:nvim_ghost_binary_path)  . ' --focus ' . $NVIM_LISTEN_ADDRESS)
 endfun
 
 fun! nvim_ghost#notify_buffer_deleted(bufnr)
 	call nvim_ghost#request_focus()
 	let l:arguments = ' --buffer-closed ' . a:bufnr
-	let l:job = jobstart(g:nvim_ghost_binary_path  . l:arguments, s:joblog_arguments)
+	let l:job = jobstart(shellescape(g:nvim_ghost_binary_path)  . l:arguments, s:joblog_arguments)
 endfun
 
 fun! nvim_ghost#setup_buffer_autocmds(bufnr)

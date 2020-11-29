@@ -9,5 +9,5 @@ if !filereadable(g:nvim_ghost_binary_path)
 	finish
 endif
 
-au UIEnter,FocusGained * call jobstart(g:nvim_ghost_binary_path  . ' --start-server', {'on_stdout':{id,data,type->nvim_ghost#joboutput_logger(data,type)}, 'on_stderr':{id,data,type->nvim_ghost#joboutput_logger(data,type)}})
+au UIEnter,FocusGained * call jobstart(shellescape(g:nvim_ghost_binary_path)  . ' --start-server', {'on_stdout':{id,data,type->nvim_ghost#joboutput_logger(data,type)}, 'on_stderr':{id,data,type->nvim_ghost#joboutput_logger(data,type)}})
 au UIEnter,FocusGained * call nvim_ghost#request_focus()
