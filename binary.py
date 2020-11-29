@@ -97,8 +97,8 @@ start_server = False
 class ArgParser:
     def __init__(self):
         self.argument_handlers_data = {
-            "--focus": self._focus,
             "--port": self._port,
+            "--focus": self._focus,
             "--window-closed": self._window_closed,
             "--buffer-closed": self._buffer_closed,
             "--update-buffer-text": self._update_buffer_text,
@@ -107,6 +107,7 @@ class ArgParser:
             "--start-server": self._start,
             "--version": self._version,
             "--help": self._help,
+            "--kill": self._kill,
         }
         self.server_requests = []
 
@@ -156,6 +157,9 @@ class ArgParser:
         with sys.stdin as stdin:
             data = stdin.read()
         self.server_requests.append(f"/update-buffer-text?{buffer}={data}")
+
+    def _kill(self):
+        self.server_requests.append("/exit")
 
 
 class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
@@ -360,7 +364,7 @@ neovim_focused_address = os.environ.get("NVIM_LISTEN_ADDRESS", None)
 argparser = ArgParser()
 argparser.parse_args()
 
-if neovim_focused_address is None:
+if start_server and neovim_focused_address is None:
     sys.exit("NVIM_LISTEN_ADDRESS environment variable not set.")
 
 if start_server:
