@@ -17,7 +17,7 @@ fun! nvim_ghost#update_buffer(bufnr)
 	if l:timer
 		call timer_stop(l:timer)
 	endif
-	let l:timer = timer_start(g:nvim_ghost_debounce, s:joblog_arguments)
+	let l:timer = timer_start(g:nvim_ghost_debounce, {->execute('call nvim_ghost#send_buffer('.a:bufnr.')')})
 	call nvim_buf_set_var(a:bufnr,'nvim_ghost_timer',l:timer)
 endfunction
 
