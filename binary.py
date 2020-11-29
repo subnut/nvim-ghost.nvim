@@ -144,10 +144,10 @@ class ArgParser:
     def _focus(self, address):
         global neovim_focused_address
         neovim_focused_address = address
-        self.server_requests.append(f"/focus?{address}")
+        self.server_requests.append(f"/focus?focus={address}")
 
     def _window_closed(self, address):
-        self.server_requests.append(f"/window-closed?{address}")
+        self.server_requests.append(f"/window-closed?window={address}")
 
     def _buffer_closed(self, buffer):
         self.server_requests.append(f"/buffer-closed?{buffer}")
@@ -214,7 +214,8 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write("True".encode("utf-8"))
 
-    def _focus_responder(self, address):
+    def _focus_responder(self, query_string):
+        _, address = urllib.parse.parse_qsl(query_string)[0]
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
         self.end_headers()
@@ -222,7 +223,8 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         global neovim_focused_address
         neovim_focused_address = address
 
-    def _window_closed_responder(self, address):
+    def _window_closed_responder(self, query_string):
+        _, address = urllib.parse.parse_qsl(query_string)[0]
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
         self.end_headers()
