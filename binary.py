@@ -98,8 +98,9 @@ class ArgParser:
     def __init__(self):
         self.argument_handlers_data = {
             "--focus": self._focus,
-            "--close": self._close,
             "--port": self._port,
+            "--window-closed": self._window_closed,
+            "--buffer-closed": self._buffer_closed,
             "--update-buffer-text": self._update_buffer_text,
         }
         self.argument_handlers_nodata = {
@@ -145,8 +146,11 @@ class ArgParser:
         neovim_focused_address = address
         self.server_requests.append(f"/focus?{address}")
 
-    def _close(self, address):
-        self.server_requests.append(f"/close?{address}")
+    def _window_closed(self, address):
+        self.server_requests.append(f"/window-closed?{address}")
+
+    def _buffer_closed(self, buffer):
+        self.server_requests.append(f"/buffer-closed?{buffer}")
 
     def _update_buffer_text(self, buffer):
         with sys.stdin as stdin:
@@ -169,7 +173,8 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
         responses_data = {
             "/focus": self._focus_responder,
-            "/close": self._close_responder,
+            "/window-closed": self._window_closed_responder,
+            "/buffer-closed": self._buffer_closed_responder,
             "/update-buffer-text": self._update_buffer_text_responder,
         }
 
@@ -217,7 +222,7 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         global neovim_focused_address
         neovim_focused_address = address
 
-    def _close_responder(self, address):
+    def _window_closed_responder(self, address):
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
         self.end_headers()
@@ -229,6 +234,15 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         if not PERSIST and len(WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS) == 0:
             global RUNNING
             RUNNING = False
+
+    def _buffer_closed_responder(self, buffer):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(buffer.encode("utf-8"))
+        global WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS
+        WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[neovim_focused_address][buffer].close()
+        del WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[neovim_focused_address][buffer]
 
     def _update_buffer_text_responder(self, query_string):
         buffer, text = urllib.parse.parse_qsl(query_string)[0]
@@ -259,6 +273,15 @@ class GhostWebSocket(WebSocket):
         self.neovim_handle = pynvim.attach("socket", path=neovim_focused_address)
         self.buffer = self.neovim_handle.command_output("echo nvim_create_buf(1,1)")
         self.neovim_handle.command(f"tabe | {self.buffer}buffer")
+        self.neovim_handle.command(
+            f"au TextChanged,TextChangedI,TextChangedP <buffer={self.buffer}> call nvim_ghost#update_buffer({self.buffer})"
+        )
+        self.neovim_handle.command(
+            f"au BufDelete <buffer={self.buffer}> call nvim_ghost#notify_buffer_deleted({self.buffer})"
+        )
+        self.neovim_handle.command(
+            f"call nvim_buf_set_var({self.buffer}, 'nvim_ghost_timer', 0)"
+        )
         global WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS
         if not WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS.__contains__(self.address):
             WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[self.address] = []
