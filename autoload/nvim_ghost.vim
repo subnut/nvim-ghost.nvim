@@ -99,7 +99,7 @@ endfun
 
 fun! nvim_ghost#_buffer_enter()
 	let s:saved_updatetime = &updatetime
-	let &updatetime = g:nvim_updatetime
+	let &updatetime = g:nvim_ghost_updatetime
 endfun
 
 fun! nvim_ghost#_buffer_leave()
