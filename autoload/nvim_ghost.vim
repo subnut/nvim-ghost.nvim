@@ -10,7 +10,17 @@ if !filereadable(g:nvim_ghost_binary_path )
 	finish
 endif
 
-let s:joblog_arguments = {'on_stdout':{id,data,type->nvim_ghost#joboutput_logger(data,type)}, 'on_stderr':{id,data,type->nvim_ghost#joboutput_logger(data,type)}}
+let s:saved_updatetime = &updatetime
+let s:can_use_cursorhold = v:false
+let s:joblog_arguments = {
+			\'on_stdout':{id,data,type->nvim_ghost#joboutput_logger(data,type)},
+			\'on_stderr':{id,data,type->nvim_ghost#joboutput_logger(data,type)}
+			\}
+let s:bufnr_list = []
+
+fun! nvim_ghost#start_server()
+	call jobstart(shellescape(g:nvim_ghost_binary_path)  . ' --start-server', s:joblog_arguments)
+endfun
 
 fun! nvim_ghost#update_buffer(bufnr)
 	let l:timer = nvim_buf_get_var(a:bufnr,'nvim_ghost_timer')
@@ -40,8 +50,17 @@ fun! nvim_ghost#notify_buffer_deleted(bufnr)
 endfun
 
 fun! nvim_ghost#setup_buffer_autocmds(bufnr)
+	if count(s:bufnr_list, a:bufnr) == 0
+		call extend(s:bufnr_list, [a:bufnr])
+	endif
 	exe 'augroup nvim_ghost_' . a:bufnr
-	exe 'au nvim_ghost_'.a:bufnr.' TextChanged,TextChangedI,TextChangedP <buffer='.a:bufnr.'> call nvim_ghost#update_buffer('.a:bufnr.')'
+	if !s:can_use_cursorhold
+		exe 'au nvim_ghost_'.a:bufnr.' TextChanged,TextChangedI,TextChangedP <buffer='.a:bufnr.'> call nvim_ghost#update_buffer('.a:bufnr.')'
+	else
+		exe 'au nvim_ghost_'.a:bufnr.' CursorHold,CursorHoldI <buffer='.a:bufnr.'> call nvim_ghost#send_buffer('.a:bufnr.')'
+		exe 'au nvim_ghost_'.a:bufnr.' BufEnter <buffer='.a:bufnr.'> call nvim_ghost#_buffer_enter()'
+		exe 'au nvim_ghost_'.a:bufnr.' BufLeave <buffer='.a:bufnr.'> call nvim_ghost#_buffer_leave()'
+	endif
 	exe 'au nvim_ghost_'.a:bufnr.' BufDelete <buffer='.a:bufnr.'> call nvim_ghost#notify_buffer_deleted('.a:bufnr.')'
 	exe 'augroup END'
 endfun
@@ -52,7 +71,7 @@ fun! nvim_ghost#delete_buffer_autocmds(bufnr)
 	exe 'augroup END'
 endfun
 
-function nvim_ghost#joboutput_logger(data,type)
+fun! nvim_ghost#joboutput_logger(data,type)
 	if !g:nvim_ghost_logging_enabled
 		return
 	endif
@@ -68,4 +87,21 @@ function nvim_ghost#joboutput_logger(data,type)
 	if a:type ==# 'stderr'
 		echohl None
 	endif
+endfun
+
+fun! nvim_ghost#_can_use_cursorhold()
+	let s:can_use_cursorhold = v:true
+	for bufnr in s:bufnr_list
+		call nvim_ghost#delete_buffer_autocmds(bufnr)
+		call nvim_ghost#setup_buffer_autocmds(bufnr)
+	endfor
+endfun
+
+fun! nvim_ghost#_buffer_enter()
+	let s:saved_updatetime = &updatetime
+	let &updatetime = g:nvim_updatetime
+endfun
+
+fun! nvim_ghost#_buffer_leave()
+	let &updatetime = s:saved_updatetime
 endfun
