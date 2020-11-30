@@ -18,8 +18,10 @@ from simple_websocket_server import WebSocketServer, WebSocket
 BUILD_VERSION = "0.1.0.02"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS = os.name == "nt"
+LOCALHOST = "127.0.0.1" if WINDOWS else "localhost"
+
+POLL_INTERVAL: float = 5  # Server poll interval in seconds
 PERSIST = False  # Permanent daemon mode (aka. forking) not implemented yet.
-POLL_INTERVAL: float = (os.name == "nt") and 1 or 5  # Server poll interval in seconds
 
 
 def _port_occupied(port):
@@ -30,7 +32,7 @@ def _port_occupied(port):
     """
     port = int(port)
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as socket_checker:
-        return socket_checker.connect_ex(("localhost", port)) == 0
+        return socket_checker.connect_ex((LOCALHOST, port)) == 0
 
 
 def _detect_running_port():
@@ -38,7 +40,7 @@ def _detect_running_port():
         with open(TEMP_FILEPATH) as file:
             old_port = file.read()
         try:
-            response = requests.get(f"http://localhost:{old_port}/is_ghost_binary")
+            response = requests.get(f"http://{LOCALHOST}:{old_port}/is_ghost_binary")
             if response.ok and response.text == "True":
                 return old_port
         except requests.exceptions.ConnectionError:
@@ -49,14 +51,14 @@ def _detect_running_port():
 def _get_running_version():
     port = _detect_running_port()
     if port:
-        response = requests.get(f"http://localhost:{port}/version")
+        response = requests.get(f"http://{LOCALHOST}:{port}/version")
         if response.ok:
             return response.text
 
 
 def _stop_running(port):
     port = int(port)
-    response = requests.get(f"http://localhost:{port}/exit")
+    response = requests.get(f"http://{LOCALHOST}:{port}/exit")
     return response.status_code
 
 
@@ -342,7 +344,7 @@ class Server:
     def _http_server(self):
         if not _port_occupied(ghost_port):
             return http.server.HTTPServer(
-                ("localhost", ghost_port), GhostHTTPRequestHandler
+                (LOCALHOST, ghost_port), GhostHTTPRequestHandler
             )
         else:
             sys.exit("Port Occupied")
@@ -351,7 +353,7 @@ class Server:
         while True:
             random_port = random.randint(9000, 65535)
             if not _port_occupied(random_port):
-                return GhostWebSocketServer("localhost", random_port, GhostWebSocket)
+                return GhostWebSocketServer(LOCALHOST, random_port, GhostWebSocket)
 
 
 class Neovim:
@@ -394,6 +396,6 @@ elif not _detect_running_port():
 ghost_port = _detect_running_port()
 if len(argparser.server_requests) > 0:
     for url in argparser.server_requests:
-        request = requests.get(f"http://localhost:{ghost_port}{url}")
+        request = requests.get(f"http://{LOCALHOST}:{ghost_port}{url}")
         if request.ok:
             print("Sent", url)
