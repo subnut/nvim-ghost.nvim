@@ -105,3 +105,7 @@ endfun
 fun! nvim_ghost#_buffer_leave()
 	let &updatetime = s:saved_updatetime
 endfun
+
+fun! nvim_ghost#session_closed()
+	call jobstart(shellescape(g:nvim_ghost_binary_path)  . ' --session-closed' . $NVIM_LISTEN_ADDRESS)
+endfun

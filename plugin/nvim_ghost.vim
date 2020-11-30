@@ -31,3 +31,5 @@ fun! s:focus_gained()
 		let s:focused = v:true
 	endif
 endfun
+
+au VimLeavePre * call nvim_ghost#session_closed()

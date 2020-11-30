@@ -101,8 +101,8 @@ class ArgParser:
         self.argument_handlers_data = {
             "--port": self._port,
             "--focus": self._focus,
-            "--window-closed": self._window_closed,
             "--buffer-closed": self._buffer_closed,
+            "--session-closed": self._session_closed,
             "--update-buffer-text": self._update_buffer_text,
         }
         self.argument_handlers_nodata = {
@@ -156,11 +156,11 @@ class ArgParser:
             neovim_focused_address = address
             self.server_requests.append(f"/focus?focus={address}")
 
-    def _window_closed(self, address):
-        self.server_requests.append(f"/window-closed?window={address}")
-
     def _buffer_closed(self, buffer):
         self.server_requests.append(f"/buffer-closed?{buffer}")
+
+    def _session_closed(self, address):
+        self.server_requests.append(f"/session-closed?session={address}")
 
     def _update_buffer_text(self, buffer):
         with sys.stdin as stdin:
@@ -186,8 +186,8 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
         responses_data = {
             "/focus": self._focus_responder,
-            "/window-closed": self._window_closed_responder,
             "/buffer-closed": self._buffer_closed_responder,
+            "/session-closed": self._session_closed_responder,
             "/update-buffer-text": self._update_buffer_text_responder,
         }
 
@@ -236,7 +236,16 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         global neovim_focused_address
         neovim_focused_address = address
 
-    def _window_closed_responder(self, query_string):
+    def _buffer_closed_responder(self, buffer):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(buffer.encode("utf-8"))
+        global WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS
+        WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[neovim_focused_address][buffer].close()
+        del WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[neovim_focused_address][buffer]
+
+    def _session_closed_responder(self, query_string):
         _, address = urllib.parse.parse_qsl(query_string)[0]
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
@@ -249,15 +258,6 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         if not PERSIST and len(WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS) == 0:
             global RUNNING
             RUNNING = False
-
-    def _buffer_closed_responder(self, buffer):
-        self.send_response(200)
-        self.send_header("Content-Type", "text/plain")
-        self.end_headers()
-        self.wfile.write(buffer.encode("utf-8"))
-        global WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS
-        WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[neovim_focused_address][buffer].close()
-        del WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[neovim_focused_address][buffer]
 
     def _update_buffer_text_responder(self, query_string):
         buffer, text = urllib.parse.parse_qsl(query_string)[0]
