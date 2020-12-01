@@ -4,15 +4,14 @@ import json
 import time
 import random
 import socket
-import requests
 import tempfile
+import threading
 import http.server
 import urllib.parse
-import threading
-import pynvim
 from typing import Dict, List
 
-# pip install -U simple-websocket-server
+import pynvim
+import requests
 from simple_websocket_server import WebSocketServer, WebSocket
 
 BUILD_VERSION = "0.1.0.02"

@@ -1,0 +1,3 @@
+pynvim
+requests
+simple-websocket-server
