@@ -5,8 +5,7 @@
 set -e
 set -u
 
-if which curl 2>&1 > /dev/null
-then
+if which curl 2>&1 >/dev/null; then
   continue
 else
   echo "curl: command not found" >&2
@@ -14,7 +13,10 @@ else
   exit 127
 fi
 
-ROOT_DIR=$(cd "$(dirname "$0")/.."; pwd -P)
+ROOT_DIR=$(
+  cd "$(dirname "$0")/.."
+  pwd -P
+)
 cd "$ROOT_DIR"
 
 if [ -e binary ]; then
@@ -39,9 +41,9 @@ FILENAME="$TARGET.tar.gz"
 DOWNLOAD_URL="$RELEASE_URL/$FILENAME"
 echo "Downloading $DOWNLOAD_URL"
 curl -L --progress-bar \
-    --fail \
-    --output "$FILENAME" \
-    "$DOWNLOAD_URL"
+  --fail \
+  --output "$FILENAME" \
+  "$DOWNLOAD_URL"
 tar xzf "$FILENAME"
 rm -f "$FILENAME"
 chmod +x "$OUTFILE"
