@@ -1,0 +1,17 @@
+if git diff --quiet --exit-code binary.py
+then :
+else
+	echo "binary.py has been changed"
+	if [ $(git diff binary.py | grep -c BUILD_VERSION) -ne 2 ]
+	then
+		echo "Please update BUILD_VERSION"
+		exit 1
+	fi
+fi
+
+if [ $(cat .binary_version) != $(cat binary.py | grep 'BUILD_VERSION = ' | grep '".*"' -o | sed 's/"//g') ]
+then
+	echo "BUILD_VERSION of binary.py does not match with .build_version"
+	exit 1
+fi
+
