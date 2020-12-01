@@ -1,18 +1,18 @@
-import os
-import sys
+import http.server
 import json
-import time
+import os
 import random
 import socket
+import sys
 import tempfile
 import threading
-import http.server
+import time
 import urllib.parse
 from typing import Dict, List
 
 import pynvim
 import requests
-from simple_websocket_server import WebSocketServer, WebSocket
+from simple_websocket_server import WebSocket, WebSocketServer
 
 BUILD_VERSION = "v0.0.3"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
