@@ -14,7 +14,7 @@ import pynvim
 import requests
 from simple_websocket_server import WebSocketServer, WebSocket
 
-BUILD_VERSION = "0.1.0.02"
+BUILD_VERSION = "1.0.0"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS = os.name == "nt"
 LOCALHOST = "127.0.0.1" if WINDOWS else "localhost"
