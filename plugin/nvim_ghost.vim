@@ -4,9 +4,10 @@ let g:nvim_ghost_logging_enabled = get(g:,'nvim_ghost_logging_enabled', 0)
 let g:nvim_ghost_updatetime = get(g:,'nvim_ghost_updatetime', 150)
 
 if !filereadable(g:nvim_ghost_binary_path)
-  echohl ErrorMsg
-  echom 'nvim-ghost binary not readable'
+  echohl WarningMsg
+  echom 'nvim-ghost binary not readable, re-installing'
   echohl None
+  call nvim_ghost#installer#install()
   finish
 endif
 
