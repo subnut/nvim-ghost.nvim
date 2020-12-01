@@ -1,1 +1,5 @@
 __pycache__
+build
+binary
+binary.exe
+binary.spec
