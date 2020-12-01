@@ -24,7 +24,7 @@ fi
 OS="$(uname)"
 OUTFILE="$ROOT_DIR/binary"
 PKG_VERSION=$(cat "$ROOT_DIR/.binary_version")
-RELEASE_URL="https://github.com/subnut/nvim-ghost/releases/download/$PKG_VERSION"
+RELEASE_URL="https://github.com/subnut/nvim-ghost.nvim/releases/download/$PKG_VERSION"
 
 if [ $OS = 'Darwin' ]; then
   TARGET="nvim-ghost-macos"
@@ -42,7 +42,7 @@ curl -L --progress-bar \
     --fail \
     --output "$FILENAME" \
     "$DOWNLOAD_URL"
-tar xzf "$FILENAME" && mv "binary" "$OUTFILE"
+tar xzf "$FILENAME"
 rm -f "$FILENAME"
 chmod +x "$OUTFILE"
 
