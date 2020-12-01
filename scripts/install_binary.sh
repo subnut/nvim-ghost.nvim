@@ -26,9 +26,9 @@ OUTFILE="$ROOT_DIR/binary"
 PKG_VERSION=$(cat "$ROOT_DIR/.binary_version")
 RELEASE_URL="https://github.com/subnut/nvim-ghost.nvim/releases/download/$PKG_VERSION"
 
-if [ $OS = 'Darwin' ]; then
+if [ "$OS" = 'Darwin' ]; then
   TARGET="nvim-ghost-macos"
-elif [ $OS = 'Linux' ]; then
+elif [ "$OS" = 'Linux' ]; then
   TARGET="nvim-ghost-linux"
 else
   echo "nvim-ghost does not support your system"
