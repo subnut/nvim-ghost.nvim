@@ -1,7 +1,5 @@
-name: Release
-on:
-  release:
-    types: [created]
+name: Upload release assets
+on: release
 
 jobs:
   build_and_upload_assets:
