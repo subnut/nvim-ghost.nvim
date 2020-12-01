@@ -45,4 +45,3 @@ curl -L --progress-bar \
 tar xzf "$FILENAME"
 rm -f "$FILENAME"
 chmod +x "$OUTFILE"
-
