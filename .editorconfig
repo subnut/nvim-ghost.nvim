@@ -1,0 +1,20 @@
+# top-most EditorConfig file
+root = true
+
+# Unix-style newlines
+# newline ending every file
+# and utf-8 charset
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+
+[*.{py,vim}]
+indent_style = space
+
+[*.py]
+indent_size = 4
+
+[*.vim]
+indent_size = 2
+
