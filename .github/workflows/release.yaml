@@ -3,7 +3,7 @@ on: release
 
 jobs:
   build_and_upload_assets:
-    name: Build and upload binary assets
+    name: Build and upload
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
@@ -28,12 +28,12 @@ jobs:
         uses: actions/setup-python@v2
       - name: Setup dependencies
         run: pip install -r requirements.txt
-      - name: Build package
+      - name: Build UNIX package
         if: matrix.target != 'win'
         run: |
           pyinstaller --onefile --distpath . binary.py
           tar -czf binary.tar.gz binary
-      - name: Build package
+      - name: Build Win64 package
         if: matrix.target == 'win'
         run: |
           pyinstaller --onefile --distpath . binary.py
