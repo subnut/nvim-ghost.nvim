@@ -1,9 +1,9 @@
 cd "$(git rev-parse --show-toplevel)"
-if git diff --quiet --exit-code binary.py
+if git diff --staged --quiet --exit-code HEAD binary.py
 then :
 else
 	echo "binary.py has been changed"
-	if [ $(git diff binary.py | grep -c BUILD_VERSION) -ne 2 ]
+	if [ $(git diff --staged HEAD binary.py | grep -c BUILD_VERSION) -ne 2 ]
 	then
 		echo "Please update BUILD_VERSION"
 		exit 1

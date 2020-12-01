@@ -22,6 +22,10 @@ function! nvim_ghost#start_server() abort
   call jobstart([g:nvim_ghost_binary_path, '--start-server'], s:joblog_arguments)
 endfunction
 
+function! nvim_ghost#kill_server() abort
+  call jobstart([g:nvim_ghost_binary_path, '--kill'], s:joblog_arguments)
+endfunction
+
 function! nvim_ghost#update_buffer(bufnr) abort
   let l:timer = nvim_buf_get_var(a:bufnr,'nvim_ghost_timer')
   if l:timer
