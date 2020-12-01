@@ -1,3 +1,4 @@
+cd "$(git rev-parse --show-toplevel)"
 if git diff --quiet --exit-code binary.py
 then :
 else
