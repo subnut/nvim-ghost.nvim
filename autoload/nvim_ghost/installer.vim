@@ -77,4 +77,3 @@ function! nvim_ghost#installer#install() abort
     call s:report_result(v:shell_error)
   endif
 endfunction
-

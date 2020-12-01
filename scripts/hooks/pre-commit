@@ -15,4 +15,3 @@ then
 	echo "BUILD_VERSION of binary.py does not match with .build_version"
 	exit 1
 fi
-
