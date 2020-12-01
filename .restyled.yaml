@@ -1,0 +1,17 @@
+enabled: true
+pull_requests: true
+statuses:
+  differences: true     # Red when style differences are found
+  no_differences: true  # Green when no differences are found
+  error: true           # Red if we encounter errors restyling
+
+restylers:
+  - name: black
+    image: restyled/restyler-black:v19.10b0
+    command:
+    - black
+    arguments: []
+    include:
+    - "**/*.py"
+    interpreters:
+    - python
