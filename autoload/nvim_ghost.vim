@@ -3,7 +3,7 @@ if exists('g:loaded_nvim_ghost')
 endif
 let g:loaded_nvim_ghost = 1
 
-if !filereadable(g:nvim_ghost_binary_path )
+if !filereadable(g:nvim_ghost_binary_path)
   echohl ErrorMsg
   echom 'nvim-ghost binary not readable'
   echohl None
@@ -19,7 +19,7 @@ let s:joblog_arguments = {
 let s:bufnr_list = []
 
 function! nvim_ghost#start_server() abort
-  call jobstart(shellescape(g:nvim_ghost_binary_path)  . ' --start-server', s:joblog_arguments)
+  call jobstart([g:nvim_ghost_binary_path, '--start-server'], s:joblog_arguments)
 endfunction
 
 function! nvim_ghost#update_buffer(bufnr) abort
@@ -33,20 +33,18 @@ endfunction
 
 function! nvim_ghost#send_buffer(bufnr) abort
   call nvim_ghost#request_focus()
-  let l:arguments = ' --update-buffer-text ' . a:bufnr
-  let l:job = jobstart(shellescape(g:nvim_ghost_binary_path) . l:arguments, s:joblog_arguments)
+  let l:job = jobstart([g:nvim_ghost_binary_path, '--update-buffer-text', a:bufnr], s:joblog_arguments)
   call chansend(l:job, getbufline(a:bufnr,1,'$'))
   call chanclose(l:job)
 endfunction
 
 function! nvim_ghost#request_focus() abort
-  call jobstart(shellescape(g:nvim_ghost_binary_path)  . ' --focus ' . $NVIM_LISTEN_ADDRESS)
+  call jobstart([g:nvim_ghost_binary_path,'--focus' ,$NVIM_LISTEN_ADDRESS])
 endfunction
 
 function! nvim_ghost#notify_buffer_deleted(bufnr) abort
   call nvim_ghost#request_focus()
-  let l:arguments = ' --buffer-closed ' . a:bufnr
-  let l:job = jobstart(shellescape(g:nvim_ghost_binary_path) . l:arguments, s:joblog_arguments)
+  let l:job = jobstart([g:nvim_ghost_binary_path, '--buffer-closed', a:bufnr], s:joblog_arguments)
 endfunction
 
 function! nvim_ghost#setup_buffer_autocmds(bufnr) abort
@@ -107,7 +105,7 @@ function! nvim_ghost#_buffer_leave() abort
 endfunction
 
 function! nvim_ghost#session_closed() abort
-  call jobstart(shellescape(g:nvim_ghost_binary_path)  . ' --session-closed' . $NVIM_LISTEN_ADDRESS)
+  call jobstart([g:nvim_ghost_binary_path,'--session-closed', $NVIM_LISTEN_ADDRESS])
 endfunction
 
 " vim: et ts=2

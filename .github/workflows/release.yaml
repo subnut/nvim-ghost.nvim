@@ -1,0 +1,54 @@
+name: Upload release assets
+on: release
+
+jobs:
+  build_and_upload_assets:
+    name: Build and upload
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+        include:
+          - os: macos-latest
+            target: macos
+            asset_name: nvim-ghost-macos.tar.gz
+            asset_path: binary.tar.gz
+          - os: ubuntu-latest
+            target: linux
+            asset_name: nvim-ghost-linux.tar.gz
+            asset_path: binary.tar.gz
+          - os: windows-latest
+            target: win
+            asset_name: nvim-ghost-win64.zip
+            asset_path: binary.zip
+    runs-on : ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+      - name: Setup dependencies
+        run: pip install -r requirements.txt
+      - name: Build UNIX package
+        if: matrix.target != 'win'
+        run: |
+          pyinstaller --onefile --distpath . binary.py
+          tar -czf binary.tar.gz binary
+      - name: Build Win64 package
+        if: matrix.target == 'win'
+        run: |
+          pyinstaller --onefile --distpath . binary.py
+          7z a -tzip binary.zip binary.exe
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.2.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Upload release asset
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: ${{ matrix.asset_path }}
+          asset_name: ${{ matrix.asset_name }}
+          asset_content_type: application/zip

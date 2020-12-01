@@ -1,3 +1,4 @@
-pynvim
-requests
-simple-websocket-server
+pynvim==0.4.2
+requests==2.25.0
+simple-websocket-server==0.4.0
+pyinstaller==4.1
