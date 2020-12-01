@@ -1,0 +1,9 @@
+enabled: true
+restylers:
+  autopep8:
+    enabled: false
+  yapf:
+    enabled: false
+  "*":
+    enabled: true
+
