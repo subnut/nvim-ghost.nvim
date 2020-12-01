@@ -1,9 +1,14 @@
 enabled: true
+
+statuses:
+  differences: true
+  no_differences: true
+  error: true
+
 restylers:
-  autopep8:
-    enabled: false
-  yapf:
-    enabled: false
-  "*":
-    enabled: true
+  - autopep8:
+      enabled: false
+  - yapf:
+      enabled: false
+  - "*"
 
