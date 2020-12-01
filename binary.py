@@ -336,8 +336,7 @@ class Server:
             target=self.http_server.serve_forever, args=(POLL_INTERVAL,), daemon=True
         )
         self.websocket_server_thread = threading.Thread(
-            target=self.websocket_server.serve_forever,
-            daemon=True,
+            target=self.websocket_server.serve_forever, daemon=True,
         )
 
     def _http_server(self):
