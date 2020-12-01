@@ -1,4 +1,5 @@
 function! nvim_ghost#installer#install() abort
+  call nvim_ghost#kill_server()
   let l:binary_path = g:nvim_ghost_binary_path
   let l:installation_dir = fnamemodify(g:nvim_ghost_binary_path, ':h')
   if filereadable(l:binary_path)

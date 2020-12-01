@@ -16,7 +16,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION = "v0.0.3"
+BUILD_VERSION = "v0.0.4"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS = os.name == "nt"
 LOCALHOST = "127.0.0.1" if WINDOWS else "localhost"
@@ -113,6 +113,7 @@ class ArgParser:
             "--focus": self._focus,
             "--help": self._help,
             "--kill": self._kill,
+            "--exit": self._kill,
         }
         self.server_requests = []
 
@@ -183,6 +184,7 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             "/": self._ghost_responder,
             "/version": self._version_responder,
             "/exit": self._exit_responder,
+            "/kill": self._exit_responder,
             "/is_ghost_binary": self._sanityCheck_responder,
         }
 
