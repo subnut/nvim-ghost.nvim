@@ -1,0 +1,25 @@
+name: Lint
+on: [push, pull_request]
+jobs:
+  Vint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+      - name: Setup dependencies
+        run: pip install vim-vint
+      - name: Run Vimscript Linter
+        run: vint .
+  Flake8:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+      - name: Setup dependencies
+        run: pip install flake8
+      - name: Run Vimscript Linter
+        run: flake8 binary.py
