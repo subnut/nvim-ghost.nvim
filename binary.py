@@ -21,6 +21,10 @@ LOCALHOST = "127.0.0.1" if WINDOWS else "localhost"
 
 POLL_INTERVAL: float = 5  # Server poll interval in seconds
 PERSIST = False  # Permanent daemon mode (aka. forking) not implemented yet.
+START_SERVER = False
+
+ghost_port = os.environ.get("GHOSTTEXT_SERVER_PORT", 4001)
+neovim_focused_address = os.environ.get("NVIM_LISTEN_ADDRESS", None)
 
 
 def _port_occupied(port):
@@ -91,10 +95,6 @@ def _check_if_socket(filepath):
     return False
 
 
-neovim_focused_address = None  # Need to be defined before Neovim class, else NameError
-start_server = False
-
-
 class ArgParser:
     def __init__(self):
         self.argument_handlers_data = {
@@ -140,8 +140,8 @@ class ArgParser:
         sys.exit()
 
     def _start(self):
-        global start_server
-        start_server = True
+        global START_SERVER
+        START_SERVER = True
 
     def _port(self, port: str):
         if not port.isdigit():
@@ -366,16 +366,13 @@ class Neovim:
 WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS: Dict[str, List[GhostWebSocket]] = {}
 WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS: Dict[str, Dict[str, GhostWebSocket]] = {}
 
-ghost_port = os.environ.get("GHOSTTEXT_SERVER_PORT", 4001)
-neovim_focused_address = os.environ.get("NVIM_LISTEN_ADDRESS", None)
-
 argparser = ArgParser()
 argparser.parse_args()
 
-if start_server and neovim_focused_address is None:
+if START_SERVER and neovim_focused_address is None:
     sys.exit("NVIM_LISTEN_ADDRESS environment variable not set.")
 
-if start_server:
+if START_SERVER:
     _exit_script_if_server_already_running()
     servers = Server()
     servers.http_server_thread.start()
