@@ -16,7 +16,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION = "v0.0.4"
+BUILD_VERSION = "v0.0.6"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS = os.name == "nt"
 LOCALHOST = "127.0.0.1" if WINDOWS else "localhost"
@@ -108,6 +108,8 @@ class ArgParser:
         }
         self.argument_handlers_nodata = {
             "--start-server": self._start,
+            "--nopersist": self._nopersist,
+            "--persist": self._persist,
             "--version": self._version,
             "--focus": self._focus,
             "--help": self._help,
@@ -145,6 +147,16 @@ class ArgParser:
     def _start(self):
         global START_SERVER
         START_SERVER = True
+
+    def _persist(self):
+        global PERSIST
+        PERSIST = True
+        self.server_requests.append("/persist")
+
+    def _nopersist(self):
+        global PERSIST
+        PERSIST = False
+        self.server_requests.append("/nopersist")
 
     def _port(self, port: str):
         if not port.isdigit():
@@ -184,6 +196,8 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             "/version": self._version_responder,
             "/exit": self._exit_responder,
             "/kill": self._exit_responder,
+            "/persist": self._persist_responder,
+            "/nopersist": self._nopersist_responder,
             "/is_ghost_binary": self._sanityCheck_responder,
         }
 
@@ -224,6 +238,22 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         global RUNNING
         RUNNING = False
 
+    def _persist_responder(self):
+        global PERSIST
+        PERSIST = True
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(f"PERSIST={PERSIST}".encode("utf-8"))
+
+    def _nopersist_responder(self):
+        global PERSIST
+        PERSIST = False
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.end_headers()
+        self.wfile.write(f"PERSIST={PERSIST}".encode("utf-8"))
+
     def _sanityCheck_responder(self):
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
@@ -255,9 +285,10 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(address.encode("utf-8"))
         global WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS
-        for item in WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[address]:
-            item.close()
-        del WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[address]
+        if WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS.__contains__(address):
+            for item in WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[address]:
+                item.close()
+            del WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[address]
         if not PERSIST and len(WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS) == 0:
             global RUNNING
             RUNNING = False
