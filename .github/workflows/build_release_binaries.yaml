@@ -1,6 +1,8 @@
 name: Upload release assets
 on:
   release:
+    types:
+      - published
   push:
     tags:
       - 'v*'
