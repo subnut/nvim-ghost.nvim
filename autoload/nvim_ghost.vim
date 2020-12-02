@@ -7,7 +7,6 @@ if !filereadable(g:nvim_ghost_binary_path)
   echohl ErrorMsg
   echom 'nvim-ghost binary not readable'
   echohl None
-  finish
 endif
 
 let s:saved_updatetime = &updatetime
