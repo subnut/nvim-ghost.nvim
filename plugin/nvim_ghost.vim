@@ -1,3 +1,7 @@
+if !has('nvim')
+  finish
+endif
+
 let g:nvim_ghost_debounce = get(g:,'nvim_ghost_debounce', 200)
 let g:nvim_ghost_binary_path  =  expand('<sfile>:h:h') . (has('win32') ? '\binary.exe' :  '/binary')
 let g:nvim_ghost_script_path  =  expand('<sfile>:h:h') . (has('win32') ? '\scripts' :  '/scripts')
@@ -6,9 +10,8 @@ let g:nvim_ghost_updatetime = get(g:,'nvim_ghost_updatetime', 150)
 
 if !filereadable(g:nvim_ghost_binary_path)
   echohl WarningMsg
-  echom 'nvim-ghost binary not readable, re-installing'
+  echom '[nvim-ghost] Binary not installed. Please run :call nvim_ghost#installer#install() and restart neovim.'
   echohl None
-  call nvim_ghost#installer#install()
   finish
 endif
 

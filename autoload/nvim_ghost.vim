@@ -1,13 +1,11 @@
+if !has('nvim')
+  finish
+endif
+
 if exists('g:loaded_nvim_ghost')
   finish
 endif
 let g:loaded_nvim_ghost = 1
-
-if !filereadable(g:nvim_ghost_binary_path)
-  echohl ErrorMsg
-  echom 'nvim-ghost binary not readable'
-  echohl None
-endif
 
 let s:saved_updatetime = &updatetime
 let s:can_use_cursorhold = v:false
