@@ -1,14 +1,20 @@
 # nvim-ghost.nvim
-This is a neovim-only plugin for [GhostText](https://github.com/GhostText/GhostText)
+
+This is a neovim-only plugin for
+[GhostText](https://github.com/GhostText/GhostText)
 
 ## Installation
-Install it using your favourite plugin manager, and execute `:call nvim_ghost#installer#install()`
-E.g. for [vim-plug](https://github.com/junegunn/vim-plug) -
+
+Install it using your favourite plugin manager, and execute
+`:call nvim_ghost#installer#install()` E.g. for
+[vim-plug](https://github.com/junegunn/vim-plug) -
+
 ```vim
 Plug 'subnut/nvim-ghost.nvim', {'do': ':call nvim_ghost#installer#install()'}
 ```
 
-:warning: **NOTE:** After installing for the first time, you need to restart neovim for the plugin to start properly
+:warning: **NOTE:** After installing for the first time, you need to restart
+neovim for the plugin to start properly
 
 ## Usage
 
