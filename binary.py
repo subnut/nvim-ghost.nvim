@@ -16,7 +16,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION = "v0.0.6"
+BUILD_VERSION = "v0.0.7"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS = os.name == "nt"
 LOCALHOST = "127.0.0.1" if WINDOWS else "localhost"
@@ -215,14 +215,15 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             responses_data[path](query)
 
     def _ghost_responder(self):
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
-        _str = f"""{{
-  "ProtocolVersion": 1,
-  "WebSocketPort": {servers.websocket_server.port}
-}}"""
-        self.wfile.write(_str.encode("utf-8"))
+        if neovim_focused_address is not None:
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            _str = f"""{{
+      "ProtocolVersion": 1,
+      "WebSocketPort": {servers.websocket_server.port}
+    }}"""
+            self.wfile.write(_str.encode("utf-8"))
 
     def _version_responder(self):
         self.send_response(200)
@@ -292,6 +293,8 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         if not PERSIST and len(WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS) == 0:
             global RUNNING
             RUNNING = False
+        global neovim_focused_address
+        neovim_focused_address = None
 
     # fmt: off
     def _update_buffer_text_responder(self, query_string):
@@ -413,6 +416,7 @@ if START_SERVER:
     servers.http_server_thread.start()
     servers.websocket_server_thread.start()
     print("Servers started")
+    Neovim().get_handle().command("echom [nvim-ghost] Servers started")
     _store_port()
     RUNNING = True
     while RUNNING:
