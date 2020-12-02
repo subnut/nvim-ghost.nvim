@@ -109,7 +109,7 @@ function! nvim_ghost#_buffer_leave() abort  " {{{1
 endfunction
 
 function! nvim_ghost#session_closed() abort " {{{1
-  call jobstart([g:nvim_ghost_binary_path,'--session-closed', $NVIM_LISTEN_ADDRESS])
+  call systemlist([g:nvim_ghost_binary_path,'--session-closed', $NVIM_LISTEN_ADDRESS])
 endfunction
   "}}}
 
