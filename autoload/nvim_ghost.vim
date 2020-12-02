@@ -17,9 +17,9 @@ let s:bufnr_list = []
 
 function! nvim_ghost#start_server() abort " {{{1
   if has('win32')
-    call systemlist(['cscript.exe', g:nvim_ghost_script_path.'\start_server.vbs'])
+    call jobstart(['cscript.exe', g:nvim_ghost_script_path.'\start_server.vbs'])
   else
-    call systemlist([g:nvim_ghost_script_path.'/start_server.sh'])
+    call jobstart([g:nvim_ghost_script_path.'/start_server.sh'])
   endif
 endfunction
 
