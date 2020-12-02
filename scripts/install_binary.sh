@@ -13,7 +13,10 @@ else
   exit 127
 fi
 
-ROOT_DIR=$(cd "$(dirname "$0")/..";pwd -P)
+ROOT_DIR=$(
+  cd "$(dirname "$0")/.."
+  pwd -P
+)
 cd "$ROOT_DIR"
 
 if [ -e binary ]; then
