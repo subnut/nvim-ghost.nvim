@@ -120,4 +120,4 @@ function! nvim_ghost#session_closed() abort " {{{1
 endfunction
   "}}}
 
-" vim: et ts=2 fdm=marke
+" vim: et ts=2 fdm=marker
