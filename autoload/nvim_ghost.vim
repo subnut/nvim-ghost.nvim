@@ -18,7 +18,11 @@ let s:joblog_arguments = {
 let s:bufnr_list = []
 
 function! nvim_ghost#start_server() abort " {{{1
-  call jobstart([g:nvim_ghost_binary_path, '--start-server'], s:joblog_arguments)
+  if has('win32')
+    call systemlist(['cscript.exe', g:nvim_ghost_script_path.'\start_server.vbs'])
+  else
+    call systemlist([g:nvim_ghost_script_path.'/start_server.sh'])
+  endif
 endfunction
 
 function! nvim_ghost#kill_server() abort  " {{{1
@@ -109,11 +113,11 @@ endfunction
 
 function! nvim_ghost#session_closed() abort " {{{1
   if has('win32')
-    call systemlist([g:nvim_ghost_binary_path,'--session-closed', $NVIM_LISTEN_ADDRESS])
+    call systemlist(['cscript.exe', g:nvim_ghost_script_path.'\session_closed.vbs'])
   else
     call systemlist([g:nvim_ghost_script_path.'/session_closed.sh'])
   endif
 endfunction
   "}}}
 
-" vim: et ts=2 fdm=marker
+" vim: et ts=2 fdm=marke
