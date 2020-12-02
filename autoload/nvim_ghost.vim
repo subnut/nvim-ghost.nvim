@@ -109,7 +109,11 @@ function! nvim_ghost#_buffer_leave() abort  " {{{1
 endfunction
 
 function! nvim_ghost#session_closed() abort " {{{1
-  call systemlist([g:nvim_ghost_binary_path,'--session-closed', $NVIM_LISTEN_ADDRESS])
+  if has('win32')
+    call systemlist([g:nvim_ghost_binary_path,'--session-closed', $NVIM_LISTEN_ADDRESS])
+  else
+    call systemlist([g:nvim_ghost_script_path.'/session_closed.sh'])
+  endif
 endfunction
   "}}}
 

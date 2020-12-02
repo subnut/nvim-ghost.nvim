@@ -1,5 +1,6 @@
 let g:nvim_ghost_debounce = get(g:,'nvim_ghost_debounce', 200)
 let g:nvim_ghost_binary_path  =  expand('<sfile>:h:h') . (has('win32') ? '\binary.exe' :  '/binary')
+let g:nvim_ghost_script_path  =  expand('<sfile>:h:h') . (has('win32') ? '\scripts' :  '/scripts')
 let g:nvim_ghost_logging_enabled = get(g:,'nvim_ghost_logging_enabled', 0)
 let g:nvim_ghost_updatetime = get(g:,'nvim_ghost_updatetime', 150)
 
