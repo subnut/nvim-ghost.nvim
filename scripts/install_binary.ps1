@@ -11,7 +11,14 @@ if (Test-Path $assetName) {
 }
 
 if (Test-Path $outFile) {
-  rm "$outFile"
+  while (Test-Path $outFile) {
+    try {
+      rm "$outFile" -ErrorAction Stop
+    }
+    catch {
+      & "$outFile" --kill
+    }
+  }
 }
 
 echo "Downloading binary..."
