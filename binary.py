@@ -16,7 +16,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION = "v0.0.9"
+BUILD_VERSION = "v0.0.10"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS = os.name == "nt"
 LOCALHOST = "127.0.0.1" if WINDOWS else "localhost"
@@ -131,6 +131,8 @@ class ArgParser:
                     if argument not in self.argument_handlers_nodata:
                         if index + 1 >= len(args):
                             sys.exit(f"Argument {argument} needs a value.")
+                    else:
+                        continue
                     self.argument_handlers_data[argument](args[index + 1])
                 if argument in self.argument_handlers_nodata:
                     self.argument_handlers_nodata[argument]()
