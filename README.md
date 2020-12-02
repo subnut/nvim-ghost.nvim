@@ -6,8 +6,8 @@ This is a neovim-only plugin for
 ## Installation
 
 Install it using your favourite plugin manager, and execute
-`:call nvim_ghost#installer#install()` E.g. for
-[vim-plug](https://github.com/junegunn/vim-plug) -
+`:call nvim_ghost#installer#install()`   
+E.g. for [vim-plug](https://github.com/junegunn/vim-plug) -
 
 ```vim
 Plug 'subnut/nvim-ghost.nvim', {'do': ':call nvim_ghost#installer#install()'}
