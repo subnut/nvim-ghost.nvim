@@ -16,7 +16,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION = "v0.0.7"
+BUILD_VERSION = "v0.0.8"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS = os.name == "nt"
 LOCALHOST = "127.0.0.1" if WINDOWS else "localhost"
@@ -107,6 +107,7 @@ class ArgParser:
             "--update-buffer-text": self._update_buffer_text,
         }
         self.argument_handlers_nodata = {
+            "--session-closed": self._session_closed,
             "--start-server": self._start,
             "--nopersist": self._nopersist,
             "--persist": self._persist,
@@ -173,8 +174,9 @@ class ArgParser:
     def _buffer_closed(self, buffer):
         self.server_requests.append(f"/buffer-closed?{buffer}")
 
-    def _session_closed(self, address):
-        self.server_requests.append(f"/session-closed?session={address}")
+    def _session_closed(self, address=os.environ.get("NVIM_LISTEN_ADDRESS")):
+        if address is not None:
+            self.server_requests.append(f"/session-closed?session={address}")
 
     def _update_buffer_text(self, buffer):
         with sys.stdin as stdin:
@@ -416,7 +418,7 @@ if START_SERVER:
     servers.http_server_thread.start()
     servers.websocket_server_thread.start()
     print("Servers started")
-    Neovim().get_handle().command("echom [nvim-ghost] Servers started")
+    Neovim().get_handle().command("echom '[nvim-ghost] Servers started'")
     _store_port()
     RUNNING = True
     while RUNNING:
