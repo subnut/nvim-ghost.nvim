@@ -1,5 +1,10 @@
 name: Upload release assets
-on: release
+on:
+  - release
+  - push:
+      tags:
+        - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
 
 jobs:
   build_and_upload_assets:
