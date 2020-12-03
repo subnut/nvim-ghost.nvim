@@ -16,13 +16,13 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION="v0.0.11"
-TEMP_FILEPATH=os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
+BUILD_VERSION = "v0.0.11"
+TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS = os.name == "nt"
-LOCALHOST ="127.0.0.1" if WINDOWS else "localhost"
+LOCALHOST = "127.0.0.1" if WINDOWS else "localhost"
 
 POLL_INTERVAL: float = 5  # Server poll interval in seconds
-PERSIST =False  # Permanent daemon mode (aka. forking) not implemented yet.
+PERSIST = False  # Permanent daemon mode (aka. forking) not implemented yet.
 START_SERVER = False
 
 ghost_port = os.environ.get("GHOSTTEXT_SERVER_PORT", 4001)
