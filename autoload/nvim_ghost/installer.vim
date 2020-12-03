@@ -77,4 +77,5 @@ function! nvim_ghost#installer#install() abort
     call execute('!' . l:command)
     call s:report_result(v:shell_error)
   endif
+  call nvim_ghost#start_server()
 endfunction
