@@ -408,7 +408,8 @@ class Neovim:
 WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS: Dict[str, List[GhostWebSocket]] = {}
 WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS: Dict[str, Dict[str, GhostWebSocket]] = {}
 
-argparser = ArgParser()
+print('Hello!' )
+argparser =ArgParser()
 argparser.parse_args()
 
 if START_SERVER and not PERSIST and neovim_focused_address is None:
@@ -416,7 +417,7 @@ if START_SERVER and not PERSIST and neovim_focused_address is None:
 
 if START_SERVER:
     _exit_script_if_server_already_running()
-    servers = Server()
+    servers= Server()
     servers.http_server_thread.start()
     servers.websocket_server_thread.start()
     print("Servers started")
