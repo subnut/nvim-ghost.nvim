@@ -16,8 +16,8 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION = "v0.0.11"
-TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
+BUILD_VERSION="v0.0.11"
+TEMP_FILEPATH=os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS = os.name == "nt"
 LOCALHOST = "127.0.0.1" if WINDOWS else "localhost"
 
