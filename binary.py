@@ -16,7 +16,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION = "v0.0.12"
+BUILD_VERSION = "v0.0.13"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS = os.name == "nt"
 LOCALHOST = "127.0.0.1" if WINDOWS else "localhost"
@@ -25,8 +25,11 @@ POLL_INTERVAL: float = 5  # Server poll interval in seconds
 PERSIST = False  # Permanent daemon mode (aka. forking) not implemented yet.
 START_SERVER = False
 
-ghost_port = os.environ.get("GHOSTTEXT_SERVER_PORT", 4001)
 neovim_focused_address = os.environ.get("NVIM_LISTEN_ADDRESS", None)
+ghost_port = os.environ.get("GHOSTTEXT_SERVER_PORT", 4001)
+if isinstance(ghost_port, str):
+    if ghost_port.isdigit():
+        ghost_port = int(ghost_port)
 
 
 def _port_occupied(port):
