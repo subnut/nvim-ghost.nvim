@@ -16,7 +16,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION = "v0.0.11"
+BUILD_VERSION = "v0.0.12"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS = os.name == "nt"
 LOCALHOST = "127.0.0.1" if WINDOWS else "localhost"
@@ -326,9 +326,7 @@ class GhostWebSocket(WebSocket):
         handle.command(f"call nvim_buf_set_lines({buffer},0,-1,0,{data_text_split})")  # noqa
         handle.command(f"call nvim_buf_set_option({buffer},'filetype','{data_syntax}')")  # noqa
         self.neovim_handle.command(f"call nvim_ghost#setup_buffer_autocmds({self.buffer})")  # noqa
-    # fmt: on
 
-    # fmt: off
     def connected(self):
         self.address = neovim_focused_address
         self.neovim_handle = pynvim.attach("socket", path=neovim_focused_address)
