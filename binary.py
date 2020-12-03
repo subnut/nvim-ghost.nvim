@@ -8,13 +8,11 @@ import tempfile
 import threading
 import time
 import urllib.parse
-from typing import Dict
-from typing import List
+from typing import Dict, List
 
 import pynvim
 import requests
-from simple_websocket_server import WebSocket
-from simple_websocket_server import WebSocketServer
+from simple_websocket_server import WebSocket, WebSocketServer
 
 BUILD_VERSION = "v0.0.11"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
