@@ -16,7 +16,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION = "v0.0.13"
+BUILD_VERSION = "v0.0.14"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS = os.name == "nt"
 LOCALHOST = "127.0.0.1" if WINDOWS else "localhost"
@@ -27,9 +27,6 @@ START_SERVER = False
 
 neovim_focused_address = os.environ.get("NVIM_LISTEN_ADDRESS", None)
 ghost_port = os.environ.get("GHOSTTEXT_SERVER_PORT", 4001)
-if isinstance(ghost_port, str):
-    if ghost_port.isdigit():
-        ghost_port = int(ghost_port)
 
 
 def _port_occupied(port):
@@ -100,6 +97,17 @@ def _check_if_socket(filepath):
     return False
 
 
+def _check_ghost_port():
+    global ghost_port
+    ghost_port = str(ghost_port)
+    if not ghost_port.isdigit():
+        if neovim_focused_address is not None:
+            Neovim().get_handle().command(
+                "echom '[nvim-ghost] Invalid port. Please set $GHOSTTEXT_SERVER_PORT to a valid port.'"  # noqa
+            )
+        sys.exit("Invalid port")
+
+
 class ArgParser:
     def __init__(self):
         self.argument_handlers_data = {
@@ -165,10 +173,8 @@ class ArgParser:
         self.server_requests.append("/nopersist")
 
     def _port(self, port: str):
-        if not port.isdigit():
-            sys.exit("Invalid port")
         global ghost_port
-        ghost_port = int(port)
+        ghost_port = port
 
     def _focus(self, address=os.environ.get("NVIM_LISTEN_ADDRESS")):
         if address is not None:
@@ -411,6 +417,7 @@ WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS: Dict[str, Dict[str, GhostWebSocket]] = 
 
 argparser = ArgParser()
 argparser.parse_args()
+_check_ghost_port()
 
 if START_SERVER and not PERSIST and neovim_focused_address is None:
     sys.exit("NVIM_LISTEN_ADDRESS environment variable not set.")
