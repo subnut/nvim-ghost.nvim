@@ -44,6 +44,7 @@ if !exists('g:_nvim_ghost_supports_focus')
   let s:focused = v:true
   fun! s:focus_gained()
     if !s:focused
+      call nvim_ghost#start_server()
       call nvim_ghost#request_focus()
       let s:focused = v:true
     endif
