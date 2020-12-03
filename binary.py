@@ -16,8 +16,8 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION="v0.0.11"
-TEMP_FILEPATH=os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
+BUILD_VERSION = "v0.0.11"
+TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS = os.name == "nt"
 LOCALHOST = "127.0.0.1" if WINDOWS else "localhost"
 
@@ -408,8 +408,8 @@ class Neovim:
 WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS: Dict[str, List[GhostWebSocket]] = {}
 WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS: Dict[str, Dict[str, GhostWebSocket]] = {}
 
-print('Hello!' )
-argparser =ArgParser()
+print("Hello!")
+argparser = ArgParser()
 argparser.parse_args()
 
 if START_SERVER and not PERSIST and neovim_focused_address is None:
@@ -417,7 +417,7 @@ if START_SERVER and not PERSIST and neovim_focused_address is None:
 
 if START_SERVER:
     _exit_script_if_server_already_running()
-    servers= Server()
+    servers = Server()
     servers.http_server_thread.start()
     servers.websocket_server_thread.start()
     print("Servers started")
