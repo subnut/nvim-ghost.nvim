@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.SECRET_TOKEN }}
       - name: Set up Python
         uses: actions/setup-python@v2
       - name: Setup dependencies
@@ -29,7 +31,13 @@ jobs:
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git checkout -b "black/blacken-$(git rev-parse --short HEAD)"
-          git commit --all -m "[bot] autoformat install.py"
-          git push --set-upstream $(git remote) $(git branch --show-current)
+          git commit --all -m "[bot] autoformat $(git rev-parse --short HEAD)"
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          token: ${{ secrets.SECRET_TOKEN }}
+          branch: black/blacken-${{ github.ref }}
+          delete-branch: true
+          title: "Python files autoformatted"
+          body: "Some changes are needed"
 
