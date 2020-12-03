@@ -1,0 +1,35 @@
+name: Black
+on: [push, pull_request]
+jobs:
+  Check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+      - name: Setup dependencies
+        run: pip install black
+      - name: Run Black
+        run: black --check .
+  Fix:
+    needs: Check
+    if: ${{ !success() || cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v2
+      - name: Setup dependencies
+        run: pip install black
+      - name: Blacken install.py
+        run: black .
+      - name: Commit & Push
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git checkout -b "black/blacken-$(git rev-parse --short HEAD)"
+          git commit --all -m "[bot] autoformat install.py"
+          git push --set-upstream $(git remote) $(git branch --show-current)
+
