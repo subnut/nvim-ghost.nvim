@@ -16,7 +16,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION = "v0.0.14"
+BUILD_VERSION = "v0.0.15"
 TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS = os.name == "nt"
 LOCALHOST = "127.0.0.1" if WINDOWS else "localhost"
@@ -26,7 +26,7 @@ PERSIST = False  # Permanent daemon mode (aka. forking) not implemented yet.
 START_SERVER = False
 
 neovim_focused_address = os.environ.get("NVIM_LISTEN_ADDRESS", None)
-ghost_port = os.environ.get("GHOSTTEXT_SERVER_PORT", 4001)
+_ghost_port = os.environ.get("GHOSTTEXT_SERVER_PORT")
 
 
 def _port_occupied(port):
@@ -47,7 +47,7 @@ def _detect_running_port():
         try:
             response = requests.get(f"http://{LOCALHOST}:{old_port}/is_ghost_binary")
             if response.ok and response.text == "True":
-                return old_port
+                return int(old_port)
         except requests.exceptions.ConnectionError:
             return False
     return False
@@ -75,7 +75,7 @@ def _store_port():
 def _exit_script_if_server_already_running():
     if _detect_running_port():
         running_port = _detect_running_port()
-        if running_port == str(ghost_port):
+        if running_port == ghost_port:
             if _get_running_version() == str(BUILD_VERSION):
                 print("Server already running")
                 sys.exit()
@@ -95,17 +95,6 @@ def _check_if_socket(filepath):
             if os.path.stat.S_ISSOCK(os.stat(filepath).st_mode):
                 return True
     return False
-
-
-def _check_ghost_port():
-    global ghost_port
-    ghost_port = str(ghost_port)
-    if not ghost_port.isdigit():
-        if neovim_focused_address is not None:
-            Neovim().get_handle().command(
-                "echom '[nvim-ghost] Invalid port. Please set $GHOSTTEXT_SERVER_PORT to a valid port.'"  # noqa
-            )
-        sys.exit("Invalid port")
 
 
 class ArgParser:
@@ -173,8 +162,8 @@ class ArgParser:
         self.server_requests.append("/nopersist")
 
     def _port(self, port: str):
-        global ghost_port
-        ghost_port = port
+        global _ghost_port
+        _ghost_port = port
 
     def _focus(self, address=os.environ.get("NVIM_LISTEN_ADDRESS")):
         if address is not None:
@@ -417,7 +406,16 @@ WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS: Dict[str, Dict[str, GhostWebSocket]] = 
 
 argparser = ArgParser()
 argparser.parse_args()
-_check_ghost_port()
+
+if _ghost_port is None:
+    _ghost_port = "4001"
+# fmt: off
+if not _ghost_port.isdigit():
+    if neovim_focused_address is not None:
+        Neovim().get_handle().command("echom '[nvim-ghost] Invalid port. Please set $GHOSTTEXT_SERVER_PORT to a valid port.'")  # noqa
+    sys.exit("Port must be a number")
+# fmt: on
+ghost_port: int = int(_ghost_port)
 
 if START_SERVER and not PERSIST and neovim_focused_address is None:
     sys.exit("NVIM_LISTEN_ADDRESS environment variable not set.")
@@ -441,7 +439,7 @@ if START_SERVER:
 elif not _detect_running_port():
     sys.exit("Server not running and --start-server not specified")
 
-ghost_port = _detect_running_port()
+ghost_port: int = _detect_running_port()
 if len(argparser.server_requests) > 0:
     for url in argparser.server_requests:
         request = requests.get(f"http://{LOCALHOST}:{ghost_port}{url}")
