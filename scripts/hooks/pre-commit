@@ -10,7 +10,7 @@ else
 	fi
 fi
 
-if [ $(cat .binary_version) != $(cat binary.py | grep 'BUILD_VERSION = ' | grep '".*"' -o | sed 's/"//g') ]
+if [ "$(cat .binary_version)" != "$(python binary.py --version)" ]
 then
 	echo "BUILD_VERSION of binary.py does not match with .build_version"
 	exit 1
