@@ -44,7 +44,7 @@ function! nvim_ghost#send_buffer(bufnr) abort " {{{1
 endfunction
 
 function! nvim_ghost#request_focus() abort  " {{{1
-  call jobstart([g:nvim_ghost_binary_path,'--focus' ,$NVIM_LISTEN_ADDRESS])
+  call jobstart([g:nvim_ghost_binary_path,'--focus', $NVIM_LISTEN_ADDRESS])
 endfunction
 
 function! nvim_ghost#notify_buffer_deleted(bufnr) abort " {{{1
@@ -116,6 +116,6 @@ function! nvim_ghost#session_closed() abort " {{{1
     call systemlist([g:nvim_ghost_script_path.'/session_closed.sh'])
   endif
 endfunction
-  "}}}
+"}}}
 
 " vim: et ts=2 fdm=marker

@@ -1,7 +1,20 @@
+function! s:report_result(exitcode) abort
+  if a:exitcode == 0
+    echom 'nvim-ghost installed sucessfully'
+  else
+    echohl ErrorMsg
+    echom 'nvim-ghost installation failed ' . '(exit code: ' . a:exitcode . ')'
+    echohl None
+  endif
+endfunction
+
+
 function! nvim_ghost#installer#install() abort
   call nvim_ghost#kill_server()
+
   let l:binary_path = g:nvim_ghost_binary_path
   let l:installation_dir = fnamemodify(g:nvim_ghost_binary_path, ':h')
+
   if filereadable(l:binary_path)
     let l:downloaded_version = systemlist(shellescape(l:binary_path) . ' --version')[0]
     let l:needed_version = readfile(l:installation_dir . '/.binary_version')[0]
@@ -11,24 +24,16 @@ function! nvim_ghost#installer#install() abort
     endif
   endif
 
-  function! s:report_result(exitcode) abort
-    if a:exitcode == 0
-      echom 'nvim-ghost installed sucessfully'
-    else
-      echohl ErrorMsg
-      echom 'nvim-ghost installation failed ' . '(exit code: ' . a:exitcode . ')'
-      echohl None
-    endif
-  endfunction
-
   if has('win32')
-    let l:command = (executable('pwsh.exe') ? 'pwsh.exe' : 'powershell.exe')
-    let l:command .= ' -Command ' . shellescape('Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process -Force; & ' . shellescape(l:installation_dir . '/scripts/install_binary.ps1'))
     let l:term_height = 8
+    let l:command = (executable('pwsh.exe') ? 'pwsh.exe' : 'powershell.exe')
+          \. ' -Command '
+          \. shellescape('Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process -Force; & ' shellescape(l:installation_dir . '/scripts/install_binary.ps1'))
   else
-    let l:command = fnameescape(l:installation_dir) . '/scripts/install_binary.sh'
     let l:term_height = 4
+    let l:command = fnameescape(l:installation_dir) . '/scripts/install_binary.sh'
   endif
+
 
   if has('nvim') && exists(':terminal') == 2
     " neovim with :terminal support
@@ -48,12 +53,14 @@ function! nvim_ghost#installer#install() abort
     set nobuflisted
     let s:terminal_bufnr = bufnr()
     call win_gotoid(l:winid)
+
   elseif has('nvim')
     " Neovim does not show any stdout output if called with :call execute(),
     " therefore to show the download progress bar, we need to call execute() by
     " itself.
     execute('!' . l:command)
     call s:report_result(v:shell_error)
+
   elseif has('terminal')
     " vim with +terminal
     " vint: next-line -ProhibitUnusedVariable
@@ -77,5 +84,6 @@ function! nvim_ghost#installer#install() abort
     call execute('!' . l:command)
     call s:report_result(v:shell_error)
   endif
+
   call nvim_ghost#start_server()
 endfunction
