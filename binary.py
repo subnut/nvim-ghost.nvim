@@ -10,26 +10,29 @@ import time
 import urllib.parse
 from typing import Dict
 from typing import List
+from typing import Union
+from typing import Optional
 
 import pynvim
 import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION = "v0.0.15"
-TEMP_FILEPATH = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
-WINDOWS = os.name == "nt"
-LOCALHOST = "127.0.0.1" if WINDOWS else "localhost"
+BUILD_VERSION: str = "v0.0.16"
+# TEMP_FILEPATH is used to store the port of the currently running server
+TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
+WINDOWS: bool = os.name == "nt"
+LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
 
 POLL_INTERVAL: float = 5  # Server poll interval in seconds
-PERSIST = False  # Permanent daemon mode (aka. forking) not implemented yet.
-START_SERVER = False
+PERSIST: bool = False  # Permanent daemon mode (aka. forking) not implemented yet.
+START_SERVER: bool = False
 
-neovim_focused_address = os.environ.get("NVIM_LISTEN_ADDRESS", None)
-_ghost_port = os.environ.get("GHOSTTEXT_SERVER_PORT")
+neovim_focused_address: Optional[str] = os.environ.get("NVIM_LISTEN_ADDRESS", None)
+_ghost_port: Optional[str] = os.environ.get("GHOSTTEXT_SERVER_PORT", None)
 
 
-def _port_occupied(port):
+def _port_occupied(port) -> bool:
     """
     If port is occupied, returns True. Else returns False
 
@@ -40,7 +43,7 @@ def _port_occupied(port):
         return socket_checker.connect_ex((LOCALHOST, port)) == 0
 
 
-def _detect_running_port():
+def _detect_running_port() -> Union[int, bool]:
     if os.path.exists(TEMP_FILEPATH):
         with open(TEMP_FILEPATH) as file:
             old_port = file.read()
@@ -53,7 +56,7 @@ def _detect_running_port():
     return False
 
 
-def _get_running_version():
+def _get_running_version() -> Optional[str]:
     port = _detect_running_port()
     if port:
         response = requests.get(f"http://{LOCALHOST}:{port}/version")
@@ -85,7 +88,7 @@ def _exit_script_if_server_already_running():
                 break
 
 
-def _check_if_socket(filepath):
+def _check_if_socket(filepath) -> bool:
     if WINDOWS:
         _dir = os.path.dirname(filepath)
         _filename = filepath.split(_dir)[1]
@@ -99,6 +102,8 @@ def _check_if_socket(filepath):
 
 class ArgParser:
     def __init__(self):
+
+        # arguments that take a value
         self.argument_handlers_data = {
             "--port": self._port,
             "--focus": self._focus,
@@ -106,6 +111,8 @@ class ArgParser:
             "--session-closed": self._session_closed,
             "--update-buffer-text": self._update_buffer_text,
         }
+
+        # arguments that don't take a value
         self.argument_handlers_nodata = {
             "--session-closed": self._session_closed,
             "--start-server": self._start,
@@ -117,6 +124,8 @@ class ArgParser:
             "--kill": self._kill,
             "--exit": self._kill,
         }
+
+        # GET requests to make to the running server
         self.server_requests = []
 
     def parse_args(self, args=sys.argv[1:]):
@@ -129,7 +138,9 @@ class ArgParser:
                 # e.g. --focus
                 if argument in self.argument_handlers_data:
                     if index + 1 >= len(args):
+                        # i.e. there is no argument after this argument
                         if argument not in self.argument_handlers_nodata:
+                            # i.e. the argument MUST get a value
                             sys.exit(f"Argument {argument} needs a value.")
                     else:
                         self.argument_handlers_data[argument](args[index + 1])
@@ -141,6 +152,8 @@ class ArgParser:
         sys.exit()
 
     def _help(self):
+        # print out the arguments allowed
+        # for reference purposes only
         for item in self.argument_handlers_nodata:
             print(item)
         for item in self.argument_handlers_data:
@@ -222,9 +235,9 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             _str = f"""{{
-      "ProtocolVersion": 1,
-      "WebSocketPort": {servers.websocket_server.port}
-    }}"""
+  "ProtocolVersion": 1,
+  "WebSocketPort": {servers.websocket_server.port}
+}}"""
             self.wfile.write(_str.encode("utf-8"))
 
     def _version_responder(self):
@@ -407,15 +420,15 @@ WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS: Dict[str, Dict[str, GhostWebSocket]] = 
 argparser = ArgParser()
 argparser.parse_args()
 
+# fmt: off
 if _ghost_port is None:
     _ghost_port = "4001"
-# fmt: off
 if not _ghost_port.isdigit():
     if neovim_focused_address is not None:
         Neovim().get_handle().command("echom '[nvim-ghost] Invalid port. Please set $GHOSTTEXT_SERVER_PORT to a valid port.'")  # noqa
     sys.exit("Port must be a number")
-# fmt: on
 ghost_port: int = int(_ghost_port)
+# fmt: on
 
 if START_SERVER and not PERSIST and neovim_focused_address is None:
     sys.exit("NVIM_LISTEN_ADDRESS environment variable not set.")
@@ -439,6 +452,7 @@ if START_SERVER:
 elif not _detect_running_port():
     sys.exit("Server not running and --start-server not specified")
 
+# Send the GET requests wanted by ArgParser() to the running server
 ghost_port: int = _detect_running_port()
 if len(argparser.server_requests) > 0:
     for url in argparser.server_requests:
