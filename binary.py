@@ -18,7 +18,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.16"
+BUILD_VERSION: str = "v0.0.17"
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
@@ -107,9 +107,7 @@ class ArgParser:
         self.argument_handlers_data = {
             "--port": self._port,
             "--focus": self._focus,
-            "--buffer-closed": self._buffer_closed,
             "--session-closed": self._session_closed,
-            "--update-buffer-text": self._update_buffer_text,
         }
 
         # arguments that don't take a value
@@ -184,17 +182,9 @@ class ArgParser:
             neovim_focused_address = address
             self.server_requests.append(f"/focus?focus={address}")
 
-    def _buffer_closed(self, buffer):
-        self.server_requests.append(f"/buffer-closed?{buffer}")
-
     def _session_closed(self, address=os.environ.get("NVIM_LISTEN_ADDRESS")):
         if address is not None:
             self.server_requests.append(f"/session-closed?session={address}")
-
-    def _update_buffer_text(self, buffer):
-        with sys.stdin as stdin:
-            data = stdin.read()
-        self.server_requests.append(f"/update-buffer-text?{buffer}={data}")
 
     def _kill(self):
         self.server_requests.append("/exit")
@@ -218,9 +208,7 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
         responses_data = {
             "/focus": self._focus_responder,
-            "/buffer-closed": self._buffer_closed_responder,
             "/session-closed": self._session_closed_responder,
-            "/update-buffer-text": self._update_buffer_text_responder,
         }
 
         if path in responses_nodata:
@@ -285,15 +273,6 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         global neovim_focused_address
         neovim_focused_address = address
 
-    def _buffer_closed_responder(self, buffer):
-        self.send_response(200)
-        self.send_header("Content-Type", "text/plain")
-        self.end_headers()
-        self.wfile.write(buffer.encode("utf-8"))
-        global WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS
-        WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[neovim_focused_address][buffer].close()
-        del WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[neovim_focused_address][buffer]
-
     def _session_closed_responder(self, query_string):
         _, address = urllib.parse.parse_qsl(query_string)[0]
         self.send_response(200)
@@ -311,40 +290,28 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         global neovim_focused_address
         neovim_focused_address = None
 
-    # fmt: off
-    def _update_buffer_text_responder(self, query_string):
-        buffer, text = urllib.parse.parse_qsl(query_string)[0]
-        text = json.dumps({"text": str(text), "selections": []})
-        WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[neovim_focused_address][buffer].send_text(text)  # noqa
-        self.send_response(200)
-        self.send_header("Content-Type", "text/plain")
-        self.end_headers()
-        self.wfile.write(text.encode("utf-8"))
-    # fmt: on
-
 
 class GhostWebSocket(WebSocket):
-    # fmt: off
     def handle(self):
+        self.ghost_should_handle = False
+        neovim_handle = self.neovim_handle
         print(json.loads(self.data))
         data = json.loads(self.data)
-        data_syntax = data["syntax"]
-        data_text: str = data["text"]
-        data_text_split = data_text.split("\n")
-        handle = self.neovim_handle
-        buffer = self.buffer
-        self.neovim_handle.command(f"call nvim_ghost#delete_buffer_autocmds({self.buffer})")  # noqa
-        handle.command(f"call nvim_buf_set_lines({buffer},0,-1,0,{data_text_split})")  # noqa
-        handle.command(f"call nvim_buf_set_option({buffer},'filetype','{data_syntax}')")  # noqa
-        self.neovim_handle.command(f"call nvim_ghost#setup_buffer_autocmds({self.buffer})")  # noqa
+        _syntax = data["syntax"]
+        _text: str = data["text"]
+        _text_split = _text.split("\n")
+        buffer_handle = self.buffer_handle
+        neovim_handle.api.buf_set_lines(buffer_handle, 0, -1, 0, _text_split)
+        neovim_handle.api.buf_set_option(buffer_handle, "filetype", _syntax)
+        self.ghost_should_handle = True
 
     def connected(self):
         self.address = neovim_focused_address
-        self.neovim_handle = pynvim.attach("socket", path=neovim_focused_address)
-        self.buffer = self.neovim_handle.command_output("echo nvim_create_buf(1,1)")
-        self.neovim_handle.command(f"call nvim_buf_set_var({self.buffer}, 'nvim_ghost_timer', 0)")  # noqa
-        self.neovim_handle.command(f"call nvim_ghost#setup_buffer_autocmds({self.buffer})")  # noqa
-        self.neovim_handle.command(f"tabe | {self.buffer}buffer")
+        self.neovim_address = neovim_focused_address
+        self.neovim_handle = pynvim.attach("socket", path=self.neovim_address)
+        self.buffer_handle = self.neovim_handle.api.create_buf(True, True)
+        self.neovim_handle.api.buf_set_var(self.buffer_handle, "nvim_ghost_timer", 0)
+        self.neovim_handle.command(f"tabe | {self.buffer_handle.number}buffer")
         global WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS
         if not WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS.__contains__(self.address):
             WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[self.address] = []
@@ -354,18 +321,44 @@ class GhostWebSocket(WebSocket):
         global WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS
         if not WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS.__contains__(self.address):
             WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[self.address] = {}
-        WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[self.address][self.buffer] = self
-    # fmt: on
+        WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[self.address][self.buffer_handle] = self
+        self.ghost_should_handle = True
+        self.ghost_start_listener()
 
     def handle_close(self):
         global WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS
         WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[self.address].remove(self)
-        self.neovim_handle.command(f"bdelete {self.buffer}")
-        self.neovim_handle.close()
         print(WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS)
-        del WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[self.address][self.buffer]
+        del WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[self.address][self.buffer_handle]
+        self.neovim_handle.command(f"bdelete {self.buffer_handle.number}")
+        self.neovim_handle.close()
+        self.loop_neovim_handle.stop_loop()
+        self.loop_neovim_handle.close()
+
+    def ghost_start_listener(self):
+        threading.Thread(target=self.ghost_listener, daemon=True).start()
+
+    def ghost_listener(self):
+        self.loop_neovim_handle = pynvim.attach("socket", path=self.neovim_address)
+        self.loop_neovim_handle.subscribe("nvim_buf_lines_event")
+        self.loop_neovim_handle.subscribe("nvim_buf_detach_event")
+        self.loop_neovim_handle.api.buf_attach(self.buffer_handle, False, {})
+        self.loop_neovim_handle.run_loop(None, self.ghost_handler)
+
+    def ghost_handler(self, *args):
+        if not self.ghost_should_handle:
+            return
+        event = args[0]
+        if event == "nvim_buf_detach_event":
+            self.close()
+        if event == "nvim_buf_lines_event":
+            handle = self.loop_neovim_handle
+            text = handle.api.buf_get_lines(self.buffer_handle, 0, -1, False)
+            text = "\n".join(text)
+            self.send_text(text)
 
     def send_text(self, text):
+        text = json.dumps({"text": str(text), "selections": []})
         self.send_message(text)
 
 
