@@ -26,7 +26,9 @@ function! nvim_ghost#installer#install() abort
 
   if has('win32')
     let l:term_height = 8
-    let l:command = (executable('pwsh.exe') ? 'pwsh.exe' : 'powershell.exe') . ' -Command ' . shellescape('Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process -Force; & ' . shellescape(l:installation_dir . '/scripts/install_binary.ps1'))
+    let l:command = (executable('pwsh.exe') ? 'pwsh.exe' : 'powershell.exe')
+          \. ' -Command '
+          \. shellescape('Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process -Force; & ' . shellescape(l:installation_dir . '/scripts/install_binary.ps1'))
   else
     let l:term_height = 4
     let l:command = fnameescape(l:installation_dir) . '/scripts/install_binary.sh'

@@ -10,7 +10,6 @@ let g:nvim_ghost_debounce = get(g:,'nvim_ghost_debounce', 200)
 let g:nvim_ghost_binary_path  =  expand('<sfile>:h:h') . (has('win32') ? '\binary.exe' :  '/binary')
 let g:nvim_ghost_script_path  =  expand('<sfile>:h:h') . (has('win32') ? '\scripts' :  '/scripts')
 let g:nvim_ghost_logging_enabled = get(g:,'nvim_ghost_logging_enabled', 0)
-let g:nvim_ghost_updatetime = get(g:,'nvim_ghost_updatetime', 150)
 
 if !filereadable(g:nvim_ghost_binary_path)
   echohl WarningMsg
@@ -36,7 +35,6 @@ if !exists('g:_nvim_ghost_supports_focus')
   " vint: next-line -ProhibitAutocmdWithNoGroup
   autocmd FocusGained,FocusLost * ++once
         \  let g:_nvim_ghost_supports_focus = 1
-        \| call nvim_ghost#_can_use_cursorhold()
         \| au! _nvim_ghost_does_not_support_focus
 
   augroup _nvim_ghost_does_not_support_focus
