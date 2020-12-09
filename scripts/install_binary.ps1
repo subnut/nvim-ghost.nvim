@@ -16,7 +16,7 @@ if (Test-Path $outFile) {
       rm "$outFile" -ErrorAction Stop
     }
     catch {
-      & "$outFile" --kill
+      & "$outFile" --kill 2>&1 >$null
     }
   }
 }

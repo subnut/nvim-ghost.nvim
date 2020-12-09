@@ -10,19 +10,19 @@ endfunction
 
 
 function! nvim_ghost#installer#install() abort
-  call nvim_ghost#kill_server()
-
   let l:binary_path = g:nvim_ghost_binary_path
   let l:installation_dir = fnamemodify(g:nvim_ghost_binary_path, ':h')
 
   if filereadable(l:binary_path)
     let l:downloaded_version = systemlist(shellescape(l:binary_path) . ' --version')[0]
     let l:needed_version = readfile(l:installation_dir . '/.binary_version')[0]
-    if l:needed_version =~# l:downloaded_version
+    if l:needed_version =~# trim(l:downloaded_version)
       echom '[nvim-ghost] already using latest version, skipping binary download'
       return 0
     endif
   endif
+
+  call nvim_ghost#kill_server()
 
   if has('win32')
     let l:term_height = 8
