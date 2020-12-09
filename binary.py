@@ -18,7 +18,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.17"
+BUILD_VERSION: str = "v0.0.18"
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
@@ -280,7 +280,7 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(address.encode("utf-8"))
         global WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS
-        if WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS.__contains__(address):
+        if WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS.__contains__(address):
             for item in WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[address]:
                 item.close()
             del WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[address]
@@ -318,10 +318,6 @@ class GhostWebSocket(WebSocket):
         if WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[self.address].count(self) == 0:
             WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[self.address].append(self)
         print(WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS)
-        global WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS
-        if not WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS.__contains__(self.address):
-            WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[self.address] = {}
-        WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[self.address][self.buffer_handle] = self
         self.ghost_should_handle = True
         self.ghost_start_listener()
 
@@ -329,7 +325,6 @@ class GhostWebSocket(WebSocket):
         global WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS
         WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[self.address].remove(self)
         print(WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS)
-        del WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS[self.address][self.buffer_handle]
         self.neovim_handle.command(f"bdelete {self.buffer_handle.number}")
         self.neovim_handle.close()
         self.loop_neovim_handle.stop_loop()
@@ -408,7 +403,6 @@ class Neovim:
 
 
 WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS: Dict[str, List[GhostWebSocket]] = {}
-WEBSOCKET_PER_BUFFER_PER_NEOVIM_ADDRESS: Dict[str, Dict[str, GhostWebSocket]] = {}
 
 argparser = ArgParser()
 argparser.parse_args()
