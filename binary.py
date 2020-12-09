@@ -8,7 +8,6 @@ import tempfile
 import threading
 import time
 import urllib.parse
-from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Union
@@ -18,14 +17,13 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.18"
+BUILD_VERSION: str = "v0.0.19"
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
 LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
 
 POLL_INTERVAL: float = 5  # Server poll interval in seconds
-PERSIST: bool = False  # Permanent daemon mode (aka. forking) not implemented yet.
 START_SERVER: bool = False
 
 neovim_focused_address: Optional[str] = os.environ.get("NVIM_LISTEN_ADDRESS", None)
@@ -114,8 +112,6 @@ class ArgParser:
         self.argument_handlers_nodata = {
             "--session-closed": self._session_closed,
             "--start-server": self._start,
-            "--nopersist": self._nopersist,
-            "--persist": self._persist,
             "--version": self._version,
             "--focus": self._focus,
             "--help": self._help,
@@ -162,16 +158,6 @@ class ArgParser:
         global START_SERVER
         START_SERVER = True
 
-    def _persist(self):
-        global PERSIST
-        PERSIST = True
-        self.server_requests.append("/persist")
-
-    def _nopersist(self):
-        global PERSIST
-        PERSIST = False
-        self.server_requests.append("/nopersist")
-
     def _port(self, port: str):
         global _ghost_port
         _ghost_port = port
@@ -201,8 +187,6 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             "/version": self._version_responder,
             "/exit": self._exit_responder,
             "/kill": self._exit_responder,
-            "/persist": self._persist_responder,
-            "/nopersist": self._nopersist_responder,
             "/is_ghost_binary": self._sanityCheck_responder,
         }
 
@@ -242,22 +226,6 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         global RUNNING
         RUNNING = False
 
-    def _persist_responder(self):
-        global PERSIST
-        PERSIST = True
-        self.send_response(200)
-        self.send_header("Content-Type", "text/plain")
-        self.end_headers()
-        self.wfile.write(f"PERSIST={PERSIST}".encode("utf-8"))
-
-    def _nopersist_responder(self):
-        global PERSIST
-        PERSIST = False
-        self.send_response(200)
-        self.send_header("Content-Type", "text/plain")
-        self.end_headers()
-        self.wfile.write(f"PERSIST={PERSIST}".encode("utf-8"))
-
     def _sanityCheck_responder(self):
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
@@ -279,16 +247,9 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/plain")
         self.end_headers()
         self.wfile.write(address.encode("utf-8"))
-        global WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS
-        if WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS.__contains__(address):
-            for item in WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[address]:
-                item.close()
-            del WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[address]
-        if not PERSIST and len(WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS) == 0:
-            global RUNNING
-            RUNNING = False
         global neovim_focused_address
-        neovim_focused_address = None
+        if address == neovim_focused_address:
+            neovim_focused_address = None
 
 
 class GhostWebSocket(WebSocket):
@@ -312,19 +273,10 @@ class GhostWebSocket(WebSocket):
         self.buffer_handle = self.neovim_handle.api.create_buf(True, True)
         self.neovim_handle.api.buf_set_var(self.buffer_handle, "nvim_ghost_timer", 0)
         self.neovim_handle.command(f"tabe | {self.buffer_handle.number}buffer")
-        global WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS
-        if not WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS.__contains__(self.address):
-            WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[self.address] = []
-        if WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[self.address].count(self) == 0:
-            WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[self.address].append(self)
-        print(WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS)
         self.ghost_should_handle = True
         self.ghost_start_listener()
 
     def handle_close(self):
-        global WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS
-        WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS[self.address].remove(self)
-        print(WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS)
         self.neovim_handle.command(f"bdelete {self.buffer_handle.number}")
         self.neovim_handle.close()
         self.loop_neovim_handle.stop_loop()
@@ -402,8 +354,6 @@ class Neovim:
         return pynvim.attach("socket", path=self.address)
 
 
-WEBSOCKETS_PER_NEOVIM_SOCKET_ADDRESS: Dict[str, List[GhostWebSocket]] = {}
-
 argparser = ArgParser()
 argparser.parse_args()
 
@@ -416,9 +366,6 @@ if not _ghost_port.isdigit():
     sys.exit("Port must be a number")
 ghost_port: int = int(_ghost_port)
 # fmt: on
-
-if START_SERVER and not PERSIST and neovim_focused_address is None:
-    sys.exit("NVIM_LISTEN_ADDRESS environment variable not set.")
 
 if START_SERVER:
     _exit_script_if_server_already_running()
