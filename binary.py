@@ -297,6 +297,29 @@ class GhostWebSocket(WebSocket):
         self._handle_neovim_notifications = True
         self._trigger_autocmds(_url)
 
+        # Cursor position
+        _selections = data["selections"]
+        _selection = _selections[-1]  # Use the last selection
+        _curpos = _selection["start"]
+        line = 1
+        col = 0
+        for _line in _text_split:
+            if len(_line) < _curpos:
+                _curpos -= len(_line)
+                _curpos -= 1  # due to newline character
+                line += 1
+                continue
+            col = _curpos
+            break
+        curpos = (line, col)
+        bufwinid = neovim_handle.command_output(
+            f"echo bufwinid({buffer_handle.number})"
+        )
+        bufwinid = int(bufwinid)
+        if bufwinid == -1:  # Buffer has no window associated with it
+            return
+        neovim_handle.api.win_set_cursor(bufwinid, curpos)
+
     def connected(self):
         self.neovim_address = neovim_focused_address
         self.neovim_handle = pynvim.attach("socket", path=self.neovim_address)
