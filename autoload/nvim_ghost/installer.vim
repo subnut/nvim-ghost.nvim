@@ -1,9 +1,9 @@
 function! s:report_result(exitcode) abort
   if a:exitcode == 0
-    echom 'nvim-ghost installed sucessfully'
+    echom '[nvim-ghost] installed sucessfully'
   else
     echohl ErrorMsg
-    echom 'nvim-ghost installation failed ' . '(exit code: ' . a:exitcode . ')'
+    echom '[nvim-ghost] installation failed ' . '(exit code: ' . a:exitcode . ')'
     echohl None
   endif
 endfunction
