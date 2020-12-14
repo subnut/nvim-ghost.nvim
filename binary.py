@@ -18,7 +18,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.22"
+BUILD_VERSION: str = "v0.0.23"
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
@@ -26,6 +26,7 @@ LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
 
 POLL_INTERVAL: float = 5  # Server poll interval in seconds
 START_SERVER: bool = False
+LOGGING_ENABLED: bool = bool(os.environ.get("NVIM_GHOST_LOGGING_ENABLED", False))
 
 neovim_focused_address: Optional[str] = os.environ.get("NVIM_LISTEN_ADDRESS", None)
 _ghost_port: Optional[str] = os.environ.get("GHOSTTEXT_SERVER_PORT", None)
@@ -111,6 +112,7 @@ class ArgParser:
 
         # arguments that don't take a value
         self.argument_handlers_nodata = {
+            "--log-to-file": self._log_to_file,
             "--session-closed": self._session_closed,
             "--start-server": self._start,
             "--version": self._version,
@@ -175,6 +177,10 @@ class ArgParser:
 
     def _kill(self):
         self.server_requests.append("/exit")
+
+    def _log_to_file(self):
+        global LOGGING_ENABLED
+        LOGGING_ENABLED = True
 
 
 class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
@@ -396,6 +402,10 @@ if START_SERVER:
     servers = Server()
     servers.http_server_thread.start()
     servers.websocket_server_thread.start()
+    if LOGGING_ENABLED:
+        sys.stdout = open("log.log", "w")
+        sys.stderr = sys.stdout
+        print(time.strftime("%A, %d %B %Y, %H:%M:%S"))
     print("Servers started")
     if neovim_focused_address is not None:
         Neovim().get_handle().command("echom '[nvim-ghost] Servers started'")

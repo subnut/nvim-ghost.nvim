@@ -3,3 +3,4 @@ build
 binary
 binary.exe
 binary.spec
+*.log

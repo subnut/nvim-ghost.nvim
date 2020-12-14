@@ -10,6 +10,10 @@ let g:nvim_ghost_binary_path  =  expand('<sfile>:h:h') . (has('win32') ? '\binar
 let g:nvim_ghost_script_path  =  expand('<sfile>:h:h') . (has('win32') ? '\scripts' :  '/scripts')
 let g:nvim_ghost_logging_enabled = get(g:,'nvim_ghost_logging_enabled', 0)
 
+if g:nvim_ghost_logging_enabled
+  let $NVIM_GHOST_LOGGING_ENABLED = 1
+endif
+
 if !filereadable(g:nvim_ghost_binary_path)
   echohl WarningMsg
   echom '[nvim-ghost] Binary not installed. Please run :call nvim_ghost#installer#install() and restart neovim.'
