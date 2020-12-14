@@ -22,8 +22,6 @@ function! nvim_ghost#installer#install() abort
     endif
   endif
 
-  call nvim_ghost#kill_server()
-
   if has('win32')
     let l:term_height = 8
     let l:command = (executable('pwsh.exe') ? 'pwsh.exe' : 'powershell.exe')

@@ -17,6 +17,7 @@ if (Test-Path $outFile) {
     }
     catch {
       & "$outFile" --kill 2>&1 >$null
+	  Start-Sleep -Seconds 0.5
     }
   }
 }
