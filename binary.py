@@ -18,7 +18,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.21"
+BUILD_VERSION: str = "v0.0.22"
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
@@ -265,12 +265,16 @@ class GhostWebSocket(WebSocket):
         print(json.loads(self.data))
         data = json.loads(self.data)
         _syntax = data["syntax"]
+        _url = data["url"]
         _text: str = data["text"]
         _text_split = _text.split("\n")
         buffer_handle = self.buffer_handle
         neovim_handle.api.buf_set_lines(buffer_handle, 0, -1, 0, _text_split)
         neovim_handle.api.buf_set_option(buffer_handle, "filetype", _syntax)
         self._handle_neovim_notifications = True
+        if self.trigger_autocmd:
+            self.trigger_autocmd = False
+            self._trigger_autocmds(_url)
 
     def connected(self):
         self.neovim_address = neovim_focused_address
@@ -284,6 +288,7 @@ class GhostWebSocket(WebSocket):
         if not WEBSOCKET_PER_NEOVIM_ADDRESS.__contains__(self.neovim_address):
             WEBSOCKET_PER_NEOVIM_ADDRESS[self.neovim_address] = []
         WEBSOCKET_PER_NEOVIM_ADDRESS[self.neovim_address].append(self)
+        self.trigger_autocmd = True
 
     def handle_close(self):
         self.neovim_handle.command(f"bdelete {self.buffer_handle.number}")
@@ -320,6 +325,10 @@ class GhostWebSocket(WebSocket):
     def _send_text(self, text):
         text = json.dumps({"text": str(text), "selections": []})
         self.send_message(text)
+
+    def _trigger_autocmds(self, url):
+        self.neovim_handle.command(f"doau nvim_ghost_user_autocommands User {url}")
+        pass
 
 
 class GhostWebSocketServer(WebSocketServer):

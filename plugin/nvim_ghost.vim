@@ -25,6 +25,12 @@ augroup nvim_ghost
   autocmd VimLeavePre         * call nvim_ghost#session_closed()
 augroup END
 
+" :doau causes error if augroup not defined
+if !exists('#nvim_ghost_user_autocommands')
+  augroup nvim_ghost_user_autocommands
+    autocmd!
+  augroup END
+endif
 
 " Compatibility for terminals that do not support focus
 " Uses CursorMoved to detect focus
