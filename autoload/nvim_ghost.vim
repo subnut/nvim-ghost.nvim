@@ -51,9 +51,9 @@ endfunction
 
 function! nvim_ghost#session_closed() abort " {{{1
   if has('win32')
-    call systemlist(['cscript.exe', g:nvim_ghost_script_path.'\session_closed.vbs'])
+    call system(['cscript.exe', g:nvim_ghost_script_path.'\session_closed.vbs'])
   else
-    call systemlist([g:nvim_ghost_script_path.'/session_closed.sh'])
+    call system([g:nvim_ghost_script_path.'/session_closed.sh'])
   endif
 endfunction
 "}}}

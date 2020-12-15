@@ -6,10 +6,13 @@ if $NVIM_LISTEN_ADDRESS != v:servername
   let $NVIM_LISTEN_ADDRESS = v:servername
 endif
 
-let g:nvim_ghost_debounce = get(g:,'nvim_ghost_debounce', 200)
 let g:nvim_ghost_binary_path  =  expand('<sfile>:h:h') . (has('win32') ? '\binary.exe' :  '/binary')
 let g:nvim_ghost_script_path  =  expand('<sfile>:h:h') . (has('win32') ? '\scripts' :  '/scripts')
 let g:nvim_ghost_logging_enabled = get(g:,'nvim_ghost_logging_enabled', 0)
+
+if g:nvim_ghost_logging_enabled
+  let $NVIM_GHOST_LOGGING_ENABLED = 1
+endif
 
 if !filereadable(g:nvim_ghost_binary_path)
   echohl WarningMsg
@@ -20,11 +23,17 @@ endif
 
 augroup nvim_ghost
   autocmd!
-  autocmd UIEnter,FocusGained * call nvim_ghost#start_server()
+  autocmd VimEnter            * call nvim_ghost#start_server()
   autocmd UIEnter,FocusGained * call nvim_ghost#request_focus()
   autocmd VimLeavePre         * call nvim_ghost#session_closed()
 augroup END
 
+" :doau causes error if augroup not defined
+if !exists('#nvim_ghost_user_autocommands')
+  augroup nvim_ghost_user_autocommands
+    autocmd!
+  augroup END
+endif
 
 " Compatibility for terminals that do not support focus
 " Uses CursorMoved to detect focus
