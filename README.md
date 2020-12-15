@@ -26,3 +26,7 @@ Really, it's _that_ simple!
 ## Features
 
 - **Zero** dependencies! Does not even need python installed!
+
+## Customization
+
+See [CUSTOMIZATION.md](./CUSTOMIZATION.md)
