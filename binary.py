@@ -8,11 +8,15 @@ import tempfile
 import threading
 import time
 import urllib.parse
-from typing import Dict, List, Optional, Union
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Union
 
 import pynvim
 import requests
-from simple_websocket_server import WebSocket, WebSocketServer
+from simple_websocket_server import WebSocket
+from simple_websocket_server import WebSocketServer
 
 BUILD_VERSION: str = "v0.0.25"
 # TEMP_FILEPATH is used to store the port of the currently running server
