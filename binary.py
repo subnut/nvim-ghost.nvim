@@ -18,7 +18,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.24"
+BUILD_VERSION: str = "v0.0.25"
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
@@ -81,6 +81,10 @@ def _exit_script_if_server_already_running():
         if running_port == ghost_port:
             if _get_running_version() == str(BUILD_VERSION):
                 print("Server already running")
+                if neovim_focused_address is not None:
+                    Neovim().get_handle().command(
+                        "echom '[nvim-ghost] Server running'"
+                    )  # noqa
                 sys.exit()
         _stop_running(running_port)
         while True:
