@@ -1,9 +1,10 @@
 function! s:report_result(exitcode) abort
   if a:exitcode == 0
-    echom '[nvim-ghost] installed sucessfully'
+    echom '[nvim-ghost] Installed sucessfully'
+    call nvim_ghost#start_server()
   else
     echohl ErrorMsg
-    echom '[nvim-ghost] installation failed ' . '(exit code: ' . a:exitcode . ')'
+    echom '[nvim-ghost] Installation failed ' . '(exit code: ' . a:exitcode . ')'
     echohl None
   endif
 endfunction
@@ -17,7 +18,7 @@ function! nvim_ghost#installer#install() abort
     let l:downloaded_version = systemlist(shellescape(l:binary_path) . ' --version')[0]
     let l:needed_version = readfile(l:installation_dir . '/.binary_version')[0]
     if l:needed_version =~# trim(l:downloaded_version)
-      echom '[nvim-ghost] already using latest version, skipping binary download'
+      echom '[nvim-ghost] Binary up-to-date'
       return 0
     endif
   endif
@@ -82,6 +83,4 @@ function! nvim_ghost#installer#install() abort
     call execute('!' . l:command)
     call s:report_result(v:shell_error)
   endif
-
-  call nvim_ghost#start_server()
 endfunction
