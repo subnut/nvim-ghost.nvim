@@ -18,7 +18,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.25"
+BUILD_VERSION: str = "v0.0.26"
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
@@ -30,6 +30,13 @@ LOGGING_ENABLED: bool = bool(os.environ.get("NVIM_GHOST_LOGGING_ENABLED", False)
 
 neovim_focused_address: Optional[str] = os.environ.get("NVIM_LISTEN_ADDRESS", None)
 _ghost_port: Optional[str] = os.environ.get("GHOSTTEXT_SERVER_PORT", None)
+
+# chdir to folder containing binary
+# otherwise the logs are generated whereever the server was started from (i.e curdir)
+# which..... isn't good. You'd have stdout.log and stderr.log files everywhere!
+os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
+# we use sys.argv[0] because __file__ doesn't give proper results with pyinstaller
+# See: https://stackoverflow.com/a/53511380
 
 
 def _port_occupied(port) -> bool:
