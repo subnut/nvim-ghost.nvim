@@ -6,7 +6,7 @@ This is a neovim-only plugin for
 ## Installation
 
 Install it using your favourite plugin manager, and execute
-`:call nvim_ghost#installer#install()`   
+`:call nvim_ghost#installer#install()`  
 E.g. for [vim-plug](https://github.com/junegunn/vim-plug) -
 
 ```vim
@@ -26,3 +26,7 @@ Really, it's _that_ simple!
 ## Features
 
 - **Zero** dependencies! Does not even need python installed!
+
+## Customization
+
+See [CUSTOMIZATION.md](./CUSTOMIZATION.md)
