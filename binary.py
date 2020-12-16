@@ -18,7 +18,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.26"
+BUILD_VERSION: str = "v0.0.27"
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
@@ -89,9 +89,9 @@ def _exit_script_if_server_already_running():
             if _get_running_version() == str(BUILD_VERSION):
                 print("Server already running")
                 if neovim_focused_address is not None:
-                    Neovim().get_handle().command(
-                        "echom '[nvim-ghost] Server running'"
-                    )  # noqa
+                    with Neovim().get_handle() as _handle:
+                        _handle.command("echom '[nvim-ghost] Server running'")
+                        _handle.close()
                 sys.exit()
         _stop_running(running_port)
         while True:
@@ -420,7 +420,8 @@ if _ghost_port is None:
     _ghost_port = "4001"
 if not _ghost_port.isdigit():
     if neovim_focused_address is not None:
-        Neovim().get_handle().command("echom '[nvim-ghost] Invalid port. Please set $GHOSTTEXT_SERVER_PORT to a valid port.'")  # noqa
+        with Neovim().get_handle() as _handle:
+            _handle.command("echom '[nvim-ghost] Invalid port. Please set $GHOSTTEXT_SERVER_PORT to a valid port.'")  # noqa
     sys.exit("Port must be a number")
 ghost_port: int = int(_ghost_port)
 # fmt: on
@@ -438,7 +439,8 @@ if START_SERVER:
         print(f"binary {BUILD_VERSION}")
     print("Servers started")
     if neovim_focused_address is not None:
-        Neovim().get_handle().command("echom '[nvim-ghost] Servers started'")
+        with Neovim().get_handle() as _handle:
+            _handle.command("echom '[nvim-ghost] Servers started'")
     _store_port()
     RUNNING = True
     while RUNNING:
@@ -451,9 +453,9 @@ elif not _detect_running_port():
     sys.exit("Server not running and --start-server not specified")
 
 # Send the GET requests wanted by ArgParser() to the running server
-ghost_port: int = _detect_running_port()
+running_port: int = _detect_running_port()
 if len(argparser.server_requests) > 0:
     for url in argparser.server_requests:
-        request = requests.get(f"http://{LOCALHOST}:{ghost_port}{url}")
+        request = requests.get(f"http://{LOCALHOST}:{running_port}{url}")
         if request.ok:
             print("Sent", url)
