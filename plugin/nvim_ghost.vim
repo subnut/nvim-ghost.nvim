@@ -23,9 +23,9 @@ endif
 
 augroup nvim_ghost
   autocmd!
-  autocmd VimEnter            * ++once call nvim_ghost#start_server()
-  autocmd UIEnter,FocusGained *        call nvim_ghost#request_focus()
-  autocmd VimLeavePre         *        call nvim_ghost#session_closed()
+  autocmd VimEnter            * call nvim_ghost#start_server()
+  autocmd UIEnter,FocusGained * call nvim_ghost#request_focus()
+  autocmd VimLeavePre         * call nvim_ghost#session_closed()
 augroup END
 
 " :doau causes error if augroup not defined
@@ -55,7 +55,6 @@ if !exists('g:_nvim_ghost_supports_focus')
   let s:focused = v:true
   fun! s:focus_gained()
     if !s:focused
-      call nvim_ghost#start_server()
       call nvim_ghost#request_focus()
       let s:focused = v:true
     endif
