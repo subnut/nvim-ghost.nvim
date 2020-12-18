@@ -18,7 +18,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.27"
+BUILD_VERSION: str = "v0.0.28"
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
@@ -293,9 +293,7 @@ class GhostWebSocket(WebSocket):
         neovim_handle.api.buf_set_lines(buffer_handle, 0, -1, 0, _text_split)
         neovim_handle.api.buf_set_option(buffer_handle, "filetype", _syntax)
         self._handle_neovim_notifications = True
-        if self.trigger_autocmd:
-            self.trigger_autocmd = False
-            self._trigger_autocmds(_url)
+        self._trigger_autocmds(_url)
 
     def connected(self):
         self.neovim_address = neovim_focused_address
@@ -316,7 +314,6 @@ class GhostWebSocket(WebSocket):
         if not WEBSOCKET_PER_NEOVIM_ADDRESS.__contains__(self.neovim_address):
             WEBSOCKET_PER_NEOVIM_ADDRESS[self.neovim_address] = []
         WEBSOCKET_PER_NEOVIM_ADDRESS[self.neovim_address].append(self)
-        self.trigger_autocmd = True
 
     def handle_close(self):
         print(
