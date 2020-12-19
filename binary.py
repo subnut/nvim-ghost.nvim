@@ -18,7 +18,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.29"
+BUILD_VERSION: str = "v0.0.30"
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
@@ -145,8 +145,9 @@ class ArgParser:
                 # i.e. they have some default value
                 # e.g. --focus
                 if argument in self.argument_handlers_data:
-                    if index + 1 >= len(args):
+                    if index + 1 >= len(args) or args[index + 1].startswith("--"):
                         # i.e. there is no argument after this argument
+                        # or next argument is not a value
                         if argument not in self.argument_handlers_nodata:
                             # i.e. the argument MUST get a value
                             sys.exit(f"Argument {argument} needs a value.")
@@ -177,13 +178,13 @@ class ArgParser:
         global _ghost_port
         _ghost_port = port
 
-    def _focus(self, address=os.environ.get("NVIM_LISTEN_ADDRESS")):
+    def _focus(self, address=neovim_focused_address):
         if address is not None:
             global neovim_focused_address
             neovim_focused_address = address
             self.server_requests.append(f"/focus?focus={address}")
 
-    def _session_closed(self, address=os.environ.get("NVIM_LISTEN_ADDRESS")):
+    def _session_closed(self, address=neovim_focused_address):
         if address is not None:
             self.server_requests.append(f"/session-closed?session={address}")
 
