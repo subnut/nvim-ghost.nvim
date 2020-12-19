@@ -13,14 +13,11 @@ let s:joblog_arguments = {
       \'on_stdout':{id,data,type->nvim_ghost#joboutput_logger(data,type)},
       \'on_stderr':{id,data,type->nvim_ghost#joboutput_logger(data,type)}
       \}
+let s:joblog_arguments_nokill = extend(copy(s:joblog_arguments), {'detach': v:true})
 let s:bufnr_list = []
 
 function! nvim_ghost#start_server() abort " {{{1
-  if has('win32')
-    call jobstart(['cscript.exe', g:nvim_ghost_script_path.'\start_server.vbs'])
-  else
-    call jobstart([g:nvim_ghost_script_path.'/start_server.sh'])
-  endif
+  call jobstart([g:nvim_ghost_binary_path, '--start-server'], s:joblog_arguments_nokill)
 endfunction
 
 function! nvim_ghost#kill_server() abort  " {{{1
