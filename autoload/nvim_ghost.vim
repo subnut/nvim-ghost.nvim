@@ -47,11 +47,7 @@ function! nvim_ghost#joboutput_logger(data,type) abort  " {{{1
 endfunction
 
 function! nvim_ghost#session_closed() abort " {{{1
-  if has('win32')
-    call system(['cscript.exe', g:nvim_ghost_script_path.'\session_closed.vbs'])
-  else
-    call system([g:nvim_ghost_script_path.'/session_closed.sh'])
-  endif
+  call jobstart([g:nvim_ghost_binary_path, '--session-closed', $NVIM_LISTEN_ADDRESS], s:joblog_arguments_nokill)
 endfunction
 "}}}
 
