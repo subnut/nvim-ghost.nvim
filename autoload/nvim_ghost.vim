@@ -25,7 +25,7 @@ function! nvim_ghost#kill_server() abort  " {{{1
 endfunction
 
 function! nvim_ghost#request_focus() abort  " {{{1
-  call jobstart([g:nvim_ghost_binary_path,'--focus', $NVIM_LISTEN_ADDRESS], s:joblog_arguments)
+  call jobstart([g:nvim_ghost_binary_path,'--focus'], s:joblog_arguments)
 endfunction
 
 function! nvim_ghost#joboutput_logger(data,type) abort  " {{{1
@@ -47,7 +47,7 @@ function! nvim_ghost#joboutput_logger(data,type) abort  " {{{1
 endfunction
 
 function! nvim_ghost#session_closed() abort " {{{1
-  call jobstart([g:nvim_ghost_binary_path, '--session-closed', $NVIM_LISTEN_ADDRESS], s:joblog_arguments_nokill)
+  call jobstart([g:nvim_ghost_binary_path, '--session-closed'], s:joblog_arguments_nokill)
 endfunction
 "}}}
 
