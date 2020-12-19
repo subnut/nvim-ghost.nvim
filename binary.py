@@ -18,7 +18,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.28"
+BUILD_VERSION: str = "v0.0.29"
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
@@ -152,7 +152,8 @@ class ArgParser:
                             sys.exit(f"Argument {argument} needs a value.")
                     else:
                         self.argument_handlers_data[argument](args[index + 1])
-                elif argument in self.argument_handlers_nodata:
+                        continue
+                if argument in self.argument_handlers_nodata:
                     self.argument_handlers_nodata[argument]()
 
     def _version(self):
