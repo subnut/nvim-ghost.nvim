@@ -26,6 +26,8 @@ Really, it's _that_ simple!
 ## Features
 
 - **Zero** dependencies! Does not even need python installed!
+- Supports Linux, macOS, **Windows**
+- Supports **neovim running inside WSL** (Windows Subsystem for Linux)
 
 ## Customization
 
