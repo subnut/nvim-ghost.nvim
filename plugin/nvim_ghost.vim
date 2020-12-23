@@ -6,8 +6,9 @@ if $NVIM_LISTEN_ADDRESS != v:servername
   let $NVIM_LISTEN_ADDRESS = v:servername
 endif
 
-let g:nvim_ghost_binary_path  =  expand('<sfile>:h:h') . (has('win32') ? '\binary.exe' :  '/binary')
-let g:nvim_ghost_script_path  =  expand('<sfile>:h:h') . (has('win32') ? '\scripts' :  '/scripts')
+let g:nvim_ghost_installation_dir = expand('<sfile>:h:h')
+let g:nvim_ghost_binary_path  =  g:nvim_ghost_installation_dir . (has('win32') ? '\binary.exe' :  '/binary')
+let g:nvim_ghost_script_path  =  g:nvim_ghost_installation_dir . (has('win32') ? '\scripts' :  '/scripts')
 let g:nvim_ghost_logging_enabled = get(g:,'nvim_ghost_logging_enabled', 0)
 
 if g:nvim_ghost_logging_enabled

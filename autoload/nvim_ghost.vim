@@ -11,10 +11,12 @@ let s:saved_updatetime = &updatetime
 let s:can_use_cursorhold = v:false
 let s:joblog_arguments = {
       \'on_stdout':{id,data,type->nvim_ghost#joboutput_logger(data,type)},
-      \'on_stderr':{id,data,type->nvim_ghost#joboutput_logger(data,type)}
+      \'on_stderr':{id,data,type->nvim_ghost#joboutput_logger(data,type)},
       \}
-let s:joblog_arguments_nokill = extend(copy(s:joblog_arguments), {'detach': v:true})
-let s:bufnr_list = []
+let s:joblog_arguments_nokill = extend(copy(s:joblog_arguments), {
+      \'detach': v:true,
+      \'cwd': g:nvim_ghost_installation_dir,
+      \})
 
 function! nvim_ghost#start_server() abort " {{{1
   call jobstart([g:nvim_ghost_binary_path, '--start-server'], s:joblog_arguments_nokill)
