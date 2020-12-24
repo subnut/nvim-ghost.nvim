@@ -18,7 +18,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.30"
+BUILD_VERSION: str = "v0.0.31"
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
@@ -287,15 +287,25 @@ class GhostWebSocket(WebSocket):
         self._handle_neovim_notifications = False
         neovim_handle = self.neovim_handle
         data = json.loads(self.data)
-        _syntax = data["syntax"]
+        _filetype = data["syntax"]
         _url = data["url"]
         _text: str = data["text"]
         _text_split = _text.split("\n")
         buffer_handle = self.buffer_handle
         neovim_handle.api.buf_set_lines(buffer_handle, 0, -1, 0, _text_split)
-        neovim_handle.api.buf_set_option(buffer_handle, "filetype", _syntax)
         self._handle_neovim_notifications = True
-        self._trigger_autocmds(_url)
+        if not self.handled_first_message:
+            self.handled_first_message = True
+            self._last_filetype = _filetype
+        if not _filetype == self._last_filetype:
+            # The filetype has changed in the browser
+            handle = neovim_handle
+            buffer = buffer_handle
+            currently_set_filetype = handle.api.buf_get_option(buffer, "filetype")
+            if self._last_filetype == currently_set_filetype:
+                # user has not set custom filetype
+                neovim_handle.api.buf_set_option(buffer_handle, "filetype", _filetype)
+                self._trigger_autocmds(_url)
 
     def connected(self):
         self.neovim_address = neovim_focused_address
@@ -316,6 +326,7 @@ class GhostWebSocket(WebSocket):
         if not WEBSOCKET_PER_NEOVIM_ADDRESS.__contains__(self.neovim_address):
             WEBSOCKET_PER_NEOVIM_ADDRESS[self.neovim_address] = []
         WEBSOCKET_PER_NEOVIM_ADDRESS[self.neovim_address].append(self)
+        self.handled_first_message = False
 
     def handle_close(self):
         print(
