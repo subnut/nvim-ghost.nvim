@@ -18,13 +18,12 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.31"
+BUILD_VERSION: str = "v0.0.32"
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
 LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
 
-POLL_INTERVAL: float = 5  # Server poll interval in seconds
 START_SERVER: bool = False
 LOGGING_ENABLED: bool = bool(os.environ.get("NVIM_GHOST_LOGGING_ENABLED", False))
 
@@ -244,8 +243,8 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write("Exiting...".encode("utf-8"))
         print(time.strftime("[%H:%M:%S]:"), "Received /exit")
-        global RUNNING
-        RUNNING = False
+        global stop_servers
+        stop_servers()
 
     def _sanityCheck_responder(self):
         self.send_response(200)
@@ -386,10 +385,11 @@ class Server:
     def __init__(self):
         self.http_server = self._http_server()
         self.websocket_server = self._websocket_server()
+        # Do not daemonize one of the threads. It will keep the binary running
+        # after the main thread has finished executing everything.
         self.http_server_thread = threading.Thread(
             target=self.http_server.serve_forever,
-            args=(POLL_INTERVAL,),
-            daemon=True
+            args=(None,),
         )
         self.websocket_server_thread = threading.Thread(
             target=self.websocket_server.serve_forever,
@@ -452,12 +452,11 @@ if START_SERVER:
         with Neovim().get_handle() as _handle:
             _handle.command("echom '[nvim-ghost] Servers started'")
     _store_port()
-    RUNNING = True
-    while RUNNING:
-        time.sleep(POLL_INTERVAL)
-        continue
-    os.remove(TEMP_FILEPATH)  # Remove port
-    sys.exit()
+
+    def stop_servers():
+        os.remove(TEMP_FILEPATH)  # Remove port
+        sys.exit()
+
 
 elif not _detect_running_port():
     sys.exit("Server not running and --start-server not specified")
