@@ -2,6 +2,7 @@ import http.server
 import json
 import os
 import random
+import signal
 import socket
 import sys
 import tempfile
@@ -18,7 +19,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.32"
+BUILD_VERSION: str = "v0.0.33"
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
@@ -455,7 +456,17 @@ if START_SERVER:
 
     def stop_servers():
         os.remove(TEMP_FILEPATH)  # Remove port
+        print("Exiting...")
         sys.exit()
+
+    def sighandler(_signal, _):
+        _signal_name = signal.Signals(_signal).name
+        print(time.strftime("[%H:%M:%S]:"), f"Caught: {_signal_name}")
+        if _signal in (signal.SIGINT, signal.SIGTERM):
+            stop_servers()
+
+    signal.signal(signal.SIGINT, sighandler)
+    signal.signal(signal.SIGTERM, sighandler)
 
 
 elif not _detect_running_port():
