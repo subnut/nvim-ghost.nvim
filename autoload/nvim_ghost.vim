@@ -8,9 +8,9 @@ endif
 let g:loaded_nvim_ghost = 1
 
 if has('win32')
-  let s:localhost = "127.0.0.1"
+  let s:localhost = '127.0.0.1'
 else
-  let s:localhost = "localhost"
+  let s:localhost = 'localhost'
 endif
 
 if !exists('$GHOSTTEXT_SERVER_PORT')
@@ -28,16 +28,30 @@ let s:joblog_arguments_nokill = extend(copy(s:joblog_arguments), {
       \'cwd': g:nvim_ghost_installation_dir,
       \})
 
-function! s:send_GET_request(url) "{{{1
-  let l:connection = sockconnect('tcp', s:localhost . ':' . $GHOSTTEXT_SERVER_PORT , {})
+function! s:send_GET_request(url) abort "{{{1
+  let l:url = s:localhost . ':' . $GHOSTTEXT_SERVER_PORT
+  let v:errmsg = ''
+  silent! let l:connection = sockconnect(
+        \'tcp',
+        \l:url,
+        \{})
+  if v:errmsg !=# ''
+    echohl WarningMsg
+    echom '[nvim-ghost] Could not connect to ' . l:url
+    echohl None
+    return 1
+  endif
+
   " Each line of request data MUST end with a \r followed by a \n
   " NOTE: Use "" instead of '', otherwise vim shall interpret \r\n literally
   " instead of their actual intended meaning
   call chansend(l:connection, 'GET ' . a:url . ' HTTP/1.1' . "\r\n")
+
   " To _flush_ the channel, we send a newline
   " NOTE: again, we need to use "" instead of ''
   call chansend(l:connection, "\n")
-  " We're done, close the channel and report
+
+  " We're done, close the channel and log what we sent
   call chanclose(l:connection)
   call nvim_ghost#joboutput_logger(['Sent ' . a:url], '')
 endfunction
