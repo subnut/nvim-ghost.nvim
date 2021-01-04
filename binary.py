@@ -19,7 +19,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.33"
+BUILD_VERSION: str = "v0.0.34"
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
@@ -112,6 +112,11 @@ def _check_if_socket(filepath) -> bool:
 
 
 class ArgParser:
+    """
+    Parser for cli arguments.
+
+    """
+
     def __init__(self):
 
         # arguments that take a value
@@ -222,6 +227,10 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             responses_data[path](query)
 
     def _ghost_responder(self):
+        """
+        The actual part. The browser extension is calling us.
+
+        """
         if neovim_focused_address is not None:
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
@@ -233,12 +242,20 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(_str.encode("utf-8"))
 
     def _version_responder(self):
+        """
+        Somebody wants to check the version of the running server
+
+        """
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
         self.end_headers()
         self.wfile.write(BUILD_VERSION.encode("utf-8"))
 
     def _exit_responder(self):
+        """
+        We have been told to exit
+
+        """
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
         self.end_headers()
@@ -248,12 +265,21 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         stop_servers()
 
     def _sanityCheck_responder(self):
+        """
+        Somebody wants to check if this is _actually_ the correct server
+
+        """
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
         self.end_headers()
         self.wfile.write("True".encode("utf-8"))
 
     def _focus_responder(self, query_string):
+        """
+        A neovim instance is reporting that it has gained focus
+
+        :param query_string str: The query part of the URL
+        """
         _, address = urllib.parse.parse_qsl(query_string)[0]
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
@@ -265,6 +291,11 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             print(time.strftime("[%H:%M:%S]:"), f"Focus {address}")
 
     def _session_closed_responder(self, query_string):
+        """
+        A neovim instance is reporting that it has been closed
+
+        :param query_string str: The query part of the URL
+        """
         _, address = urllib.parse.parse_qsl(query_string)[0]
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
@@ -284,7 +315,10 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 class GhostWebSocket(WebSocket):
     def handle(self):
         print(time.strftime("[%H:%M:%S]:"), f"{self.address[1]} got", self.data)
+
+        # Stop handling notifications caused by us. Mitigates race condition.
         self._handle_neovim_notifications = False
+
         neovim_handle = self.neovim_handle
         data = json.loads(self.data)
         _filetype = data["syntax"]
@@ -293,18 +327,30 @@ class GhostWebSocket(WebSocket):
         _text_split = _text.split("\n")
         buffer_handle = self.buffer_handle
         neovim_handle.api.buf_set_lines(buffer_handle, 0, -1, 0, _text_split)
+
+        # Resume handling notifications. We're done changing the buffer text.
         self._handle_neovim_notifications = True
+
         if not self.handled_first_message:
+            # We hadn't handled the first message yet.
+            # i.e. this is the first message, and we have already handled it.
+            # So we _have_ handled the first message, you moron.
             self.handled_first_message = True
-            self._last_filetype = _filetype
-        if not _filetype == self._last_filetype:
+            # Since this is the first message, it means we haven't set the
+            # filetype yet. So, set the filetype now.
+            neovim_handle.api.buf_set_option(buffer_handle, "filetype", _filetype)
+            self._trigger_autocmds(_url)
+            self._last_set_filetype = _filetype
+
+        if not _filetype == self._last_set_filetype:
             # The filetype has changed in the browser
             handle = neovim_handle
             buffer = buffer_handle
             currently_set_filetype = handle.api.buf_get_option(buffer, "filetype")
-            if self._last_filetype == currently_set_filetype:
+            if self._last_set_filetype == currently_set_filetype:
                 # user has not set custom filetype
                 neovim_handle.api.buf_set_option(buffer_handle, "filetype", _filetype)
+                self._last_set_filetype = _filetype
                 self._trigger_autocmds(_url)
 
     def connected(self):
@@ -372,10 +418,11 @@ class GhostWebSocket(WebSocket):
 
     def _trigger_autocmds(self, url):
         self.neovim_handle.command(f"doau nvim_ghost_user_autocommands User {url}")
-        pass
 
 
 class GhostWebSocketServer(WebSocketServer):
+    # This is nessecary because the imported WebSocketServer does not store
+    # it's port number.  Yes, I have seen the source code. It doesn't.
     def __init__(self, host, port, websocketclass, **kwargs):
         self.port = port
         super().__init__(host, port, websocketclass, **kwargs)
