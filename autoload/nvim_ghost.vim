@@ -19,7 +19,11 @@ let s:joblog_arguments_nokill = extend(copy(s:joblog_arguments), {
       \})
 
 function! nvim_ghost#start_server() abort " {{{1
-  call jobstart([g:nvim_ghost_binary_path, '--start-server'], s:joblog_arguments_nokill)
+  if has('win32')
+    call jobstart(['cscript.exe', g:nvim_ghost_script_path.'\start_server.vbs'])
+  else
+    call jobstart([g:nvim_ghost_binary_path, '--start-server'], s:joblog_arguments_nokill)
+  endif
 endfunction
 
 function! nvim_ghost#kill_server() abort  " {{{1
