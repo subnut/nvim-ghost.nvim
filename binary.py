@@ -19,7 +19,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.35"
+BUILD_VERSION: str = "v0.0.36"
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
@@ -265,6 +265,11 @@ class GhostWebSocket(WebSocket):
         # Resume handling notifications. We're done changing the buffer text.
         self._handle_neovim_notifications = True
 
+        # Save the text that we just set. So that, if a nvim_buf_lines_event
+        # wants to sent the exact same text, we can stop it.  i.e. mitigate
+        # race condition even more
+        self._last_set_text = _text
+
         if not self.handled_first_message:
             # We hadn't handled the first message yet.
             # i.e. this is the first message, and we have already handled it.
@@ -343,6 +348,14 @@ class GhostWebSocket(WebSocket):
             handle = self.loop_neovim_handle
             text = handle.api.buf_get_lines(self.buffer_handle, 0, -1, False)
             text = "\n".join(text)
+            if self._last_set_text is not None:
+                if text == self._last_set_text:
+                    # Avoid sending the text we just set. Race conditioon
+                    # mitigation
+                    return
+                # Text has been changed by user. _last_set_text is now outdated
+                # and invalid.
+                self._last_set_text = None
             self._send_text(text)
 
     def _send_text(self, text):
