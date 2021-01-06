@@ -19,17 +19,27 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.36"
+BUILD_VERSION: str = "v0.0.37"
+
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
 LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
-
-START_SERVER: bool = True
 LOGGING_ENABLED: bool = bool(os.environ.get("NVIM_GHOST_LOGGING_ENABLED", False))
 
 neovim_focused_address: Optional[str] = os.environ.get("NVIM_LISTEN_ADDRESS", None)
-_ghost_port: Optional[str] = os.environ.get("GHOSTTEXT_SERVER_PORT", None)
+_ghost_port: str = os.environ.get("GHOSTTEXT_SERVER_PORT", "4001")
+
+
+if not _ghost_port.isdigit():
+    if neovim_focused_address is not None:
+        with pynvim.attach("socket", path=neovim_focused_address) as _handle:
+            # fmt: off
+            _handle.command("echom '[nvim-ghost] Invalid port. Please set $GHOSTTEXT_SERVER_PORT to a valid port.'")  # noqa
+            # fmt: on
+    sys.exit("Port must be a number")
+GHOST_PORT: int = int(_ghost_port)
+
 
 # chdir to folder containing binary
 # otherwise the logs are generated whereever the server was started from (i.e curdir)
@@ -63,52 +73,39 @@ def _detect_running_port() -> Union[int, bool]:
     return False
 
 
-def _get_running_version() -> Optional[str]:
-    port = _detect_running_port()
-    if port:
-        response = requests.get(f"http://{LOCALHOST}:{port}/version")
-        if response.ok:
-            return response.text
+def _get_running_version(port) -> Optional[str]:
+    response = requests.get(f"http://{LOCALHOST}:{port}/version")
+    if response.ok:
+        return response.text
 
 
-def _stop_running(port):
-    port = int(port)
+def _stop_running_server(port) -> None:
     response = requests.get(f"http://{LOCALHOST}:{port}/exit")
     return response.status_code
 
 
-def _store_port():
+def _store_port() -> None:
     with open(TEMP_FILEPATH, "w+") as file:
         file.write(str(servers.http_server.server_port))
 
 
-def _exit_script_if_server_already_running():
-    if _detect_running_port():
-        running_port = _detect_running_port()
-        if running_port == ghost_port:
-            if _get_running_version() == str(BUILD_VERSION):
+def _exit_script_if_server_already_running() -> None:
+    running_port = _detect_running_port()
+    if running_port:
+        if running_port == GHOST_PORT:
+            if _get_running_version(running_port) == BUILD_VERSION:
                 print("Server already running")
                 if neovim_focused_address is not None:
                     _handle = pynvim.attach("socket", path=neovim_focused_address)
                     _handle.command("echom '[nvim-ghost] Server running'")
                     _handle.close()
                 sys.exit()
-        _stop_running(running_port)
+        # Server is outdated. Stop it.
+        _stop_running_server(running_port)
+        # Wait till the server has stopped
         while True:
             if not _port_occupied(running_port):
                 break
-
-
-def _check_if_socket(filepath) -> bool:
-    if WINDOWS:
-        _dir = os.path.dirname(filepath)
-        _filename = filepath.split(_dir)[1]
-        return os.listdir(_dir).__contains__(_filename)
-    else:
-        if os.path.exists(filepath):
-            if os.path.stat.S_ISSOCK(os.stat(filepath).st_mode):
-                return True
-    return False
 
 
 class ArgParser:
@@ -177,12 +174,25 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         The actual part. The browser extension is calling us.
 
         """
-        if neovim_focused_address is not None:
-            _str = f"""{{
+
+        if neovim_focused_address is None:
+            # There's no neovim instance to handle our request
+            return
+        payload = (
+            """\
+{
   "ProtocolVersion": 1,
-  "WebSocketPort": {servers.websocket_server.port}
-}}"""
-            self._respond(_str)
+  "WebSocketPort": {%s}
+}"""
+            % servers.websocket_server.port
+        )
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(payload.encode("utf-8"))
+        # NOTE: We didn't use _respond because it sets Content-Type to
+        # text/plain, but the protocol mentions that the Content-Type should be
+        # application/json
 
     def _version_responder(self):
         """
@@ -393,9 +403,9 @@ class Server:
     # fmt: on
 
     def _http_server(self):
-        if not _port_occupied(ghost_port):
+        if not _port_occupied(GHOST_PORT):
             return http.server.HTTPServer(
-                (LOCALHOST, ghost_port), GhostHTTPRequestHandler
+                (LOCALHOST, GHOST_PORT), GhostHTTPRequestHandler
             )
         else:
             sys.exit("Port Occupied")
@@ -411,18 +421,6 @@ WEBSOCKET_PER_NEOVIM_ADDRESS: Dict[str, List[GhostWebSocket]] = {}
 
 argparser = ArgParser()
 argparser.parse_args()
-
-# fmt: off
-if _ghost_port is None:
-    _ghost_port = "4001"
-if not _ghost_port.isdigit():
-    if neovim_focused_address is not None:
-        with pynvim.attach("socket", path=neovim_focused_address) as _handle:
-            _handle.command("echom '[nvim-ghost] Invalid port. Please set $GHOSTTEXT_SERVER_PORT to a valid port.'")  # noqa
-    sys.exit("Port must be a number")
-ghost_port: int = int(_ghost_port)
-# fmt: on
-
 
 # Start servers
 _exit_script_if_server_already_running()
