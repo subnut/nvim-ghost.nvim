@@ -11,13 +11,13 @@ if (Test-Path $assetName) {
 }
 
 if (Test-Path $outFile) {
-  Write-Error "Binary still running"
+  echo "Binary still running"
   while (Test-Path $outFile) {
     try {
       rm "$outFile" -ErrorAction Stop
     }
     catch {
-      Write-Error "Please run ':call nvim_ghost#kill_server()' in neovim"
+      echo "Please run ':call nvim_ghost#kill_server()' in neovim"
       Start-Sleep -Seconds 1
     }
   }
