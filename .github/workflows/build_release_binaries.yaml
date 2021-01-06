@@ -42,6 +42,14 @@ jobs:
       - name: Build Win64 package
         if: matrix.target == 'win'
         run: |
+          pip uninstall -y pyinstaller
+          git clone https://github.com/pyinstaller/pyinstaller --depth 1
+          cd pyinstaller
+          cd bootloader
+          python waf all
+          cd ..
+          python setup.py install
+          cd ..
           pyinstaller --onefile --distpath . binary.py
           7z a -tzip binary.zip binary.exe
       - name: Get release
