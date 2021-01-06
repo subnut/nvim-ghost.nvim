@@ -12,14 +12,13 @@ import urllib.parse
 from typing import Dict
 from typing import List
 from typing import Optional
-from typing import Union
 
 import pynvim
 import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.38"
+BUILD_VERSION: str = "v0.0.39"
 
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
@@ -60,7 +59,13 @@ def _port_occupied(port) -> bool:
         return socket_checker.connect_ex((LOCALHOST, port)) == 0
 
 
-def _detect_running_port() -> Union[int, bool]:
+def _detect_running_port() -> Optional[int]:
+    """
+    Checks whether the server is already running. If yes, returns the port it
+    is running on.
+
+    :rtype Optional[int]: Port number of server (if running), else None
+    """
     if os.path.exists(TEMP_FILEPATH):
         with open(TEMP_FILEPATH) as file:
             old_port = file.read()
@@ -69,29 +74,43 @@ def _detect_running_port() -> Union[int, bool]:
             if response.ok and response.text == "True":
                 return int(old_port)
         except requests.exceptions.ConnectionError:
-            return False
-    return False
+            return
 
 
 def _get_running_version(port) -> Optional[str]:
+    """
+    Fetch the version of the currently running server
+
+    :param port int: The port number the server is running on
+    :rtype Optional[str]: Version of the running server
+    """
     response = requests.get(f"http://{LOCALHOST}:{port}/version")
     if response.ok:
         return response.text
 
 
 def _stop_running_server(port) -> None:
+    """
+    Ask running server to stop
+
+    :param port int: Port of running server
+    """
     response = requests.get(f"http://{LOCALHOST}:{port}/exit")
     return response.status_code
 
 
 def _store_port() -> None:
+    """
+    Store the port number of Server in TEMP_FILEPATH
+
+    """
     with open(TEMP_FILEPATH, "w+") as file:
         file.write(str(servers.http_server.server_port))
 
 
 def _exit_script_if_server_already_running() -> None:
     running_port = _detect_running_port()
-    if running_port:
+    if running_port is not None:
         if running_port == GHOST_PORT:
             if _get_running_version(running_port) == BUILD_VERSION:
                 print("Server already running")
@@ -126,9 +145,8 @@ class ArgParser:
 
     def parse_args(self, args=sys.argv[1:]):
         for index, argument in enumerate(args):
-            if argument.startswith("--"):
-                if argument in self.argument_handlers:
-                    self.argument_handlers[argument]()
+            if argument in self.argument_handlers:
+                self.argument_handlers[argument]()
 
     def _version(self):
         print(BUILD_VERSION)
@@ -154,7 +172,6 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             "/": self._ghost_responder,
             "/version": self._version_responder,
             "/exit": self._exit_responder,
-            "/kill": self._exit_responder,
             "/is_ghost_binary": self._sanity_check_responder,
         }
 
@@ -180,7 +197,8 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             return
         # In f-strings, to insert literal {, we need to escape it using another {
         # So {{ translates to a single literal {
-        payload = f"""{{
+        payload = f"""\
+{{
   "ProtocolVersion": 1,
   "WebSocketPort": {servers.websocket_server.port}
 }}"""
@@ -248,6 +266,11 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             neovim_focused_address = None
 
     def _respond(self, text):
+        """
+        Send text response with Content-Type text/plain
+
+        :param text str: Text to send
+        """
         self.send_response(200)
         self.send_header("Content-Type", "text/plain")
         self.end_headers()
@@ -258,7 +281,7 @@ class GhostWebSocket(WebSocket):
     def handle(self):
         print(time.strftime("[%H:%M:%S]:"), f"{self.address[1]} got", self.data)
 
-        # Stop handling notifications caused by us. Mitigates race condition.
+        # Don't handle the next nvim_buf_lines_event
         self._handle_neovim_notifications = False
 
         neovim_handle = self.neovim_handle
@@ -269,9 +292,6 @@ class GhostWebSocket(WebSocket):
         _text_split = _text.split("\n")
         buffer_handle = self.buffer_handle
         neovim_handle.api.buf_set_lines(buffer_handle, 0, -1, 0, _text_split)
-
-        # Resume handling notifications. We're done changing the buffer text.
-        self._handle_neovim_notifications = True
 
         # Save the text that we just set. So that, if a nvim_buf_lines_event
         # wants to sent the exact same text, we can stop it.  i.e. mitigate
@@ -348,6 +368,11 @@ class GhostWebSocket(WebSocket):
 
     def _neovim_handler(self, *args):
         if not self._handle_neovim_notifications:
+            # Resume handling notifications. We have received the notification
+            # caused by the change caused by ourselves.
+            self._handle_neovim_notifications = True
+            # This notification was caused by us changing the buffer text.
+            # Don't handle it.
             return
         event = args[0]
         if event == "nvim_buf_detach_event":
@@ -358,8 +383,8 @@ class GhostWebSocket(WebSocket):
             text = "\n".join(text)
             if self._last_set_text is not None:
                 if text == self._last_set_text:
-                    # Avoid sending the text we just set. Race conditioon
-                    # mitigation
+                    # We are going to send the text that we just set! Stop!
+                    # Mitigation for race condition
                     return
                 # Text has been changed by user. _last_set_text is now outdated
                 # and invalid.
@@ -453,3 +478,5 @@ def signal_handler(_signal, _):
 
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
+
+# vim: et ts=4 sw=4 sts=4

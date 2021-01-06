@@ -4,3 +4,5 @@ binary
 binary.exe
 binary.spec
 *.log
+venv
+.venv
