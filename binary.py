@@ -19,7 +19,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.37"
+BUILD_VERSION: str = "v0.0.38"
 
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
@@ -178,14 +178,12 @@ class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         if neovim_focused_address is None:
             # There's no neovim instance to handle our request
             return
-        payload = (
-            """\
-{
+        # In f-strings, to insert literal {, we need to escape it using another {
+        # So {{ translates to a single literal {
+        payload = f"""{{
   "ProtocolVersion": 1,
-  "WebSocketPort": {%s}
-}"""
-            % servers.websocket_server.port
-        )
+  "WebSocketPort": {servers.websocket_server.port}
+}}"""
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
