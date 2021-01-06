@@ -18,7 +18,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.39"
+BUILD_VERSION: str = "v0.0.40"
 
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
@@ -409,21 +409,18 @@ class GhostWebSocketServer(WebSocketServer):
 
 
 class Server:
-    # fmt: off
     def __init__(self):
         self.http_server = self._http_server()
         self.websocket_server = self._websocket_server()
         # Do not daemonize one of the threads. It will keep the binary running
         # after the main thread has finished executing everything.
         self.http_server_thread = threading.Thread(
-            target=self.http_server.serve_forever,
-            args=(None,),
+            target=self._http_server_serve_forever
         )
         self.websocket_server_thread = threading.Thread(
             target=self.websocket_server.serve_forever,
             daemon=True,
         )
-    # fmt: on
 
     def _http_server(self):
         if not _port_occupied(GHOST_PORT):
@@ -432,6 +429,10 @@ class Server:
             )
         else:
             sys.exit("Port Occupied")
+
+    def _http_server_serve_forever(self):
+        while True:
+            self.http_server.handle_request()
 
     def _websocket_server(self):
         while True:
