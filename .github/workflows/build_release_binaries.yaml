@@ -18,14 +18,17 @@ jobs:
             target: macos
             asset_name: nvim-ghost-macos.tar.gz
             asset_path: binary.tar.gz
+            packaging_command: tar -czf binary.tar.gz binary
           - os: ubuntu-latest
             target: linux
             asset_name: nvim-ghost-linux.tar.gz
             asset_path: binary.tar.gz
+            packaging_command: tar -czf binary.tar.gz binary
           - os: windows-latest
             target: win
             asset_name: nvim-ghost-win64.zip
             asset_path: binary.zip
+            packaging_command: 7z a -tzip binary.zip binary.exe
     runs-on : ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -34,15 +37,8 @@ jobs:
         uses: actions/setup-python@v2
       - name: Setup dependencies
         run: pip install -r requirements.txt
-      - name: Build UNIX package
-        if: matrix.target != 'win'
+      - name: Setup pyinstaller
         run: |
-          pyinstaller --onefile --distpath . binary.py
-          tar -czf binary.tar.gz binary
-      - name: Build Win64 package
-        if: matrix.target == 'win'
-        run: |
-          pip uninstall -y pyinstaller
           git clone https://github.com/pyinstaller/pyinstaller --depth 1
           cd pyinstaller
           cd bootloader
@@ -50,8 +46,10 @@ jobs:
           cd ..
           python setup.py install
           cd ..
-          pyinstaller --onefile --distpath . binary.py
-          7z a -tzip binary.zip binary.exe
+      - name: Build binary
+        run: pyinstaller --onefile --distpath . binary.py
+      - name: Build package
+        run: ${{ matrix.packaging_command }}
       - name: Get release
         id: get_release
         uses: bruceadams/get-release@v1.2.2
