@@ -1,4 +1,3 @@
-import http.server
 import json
 import os
 import random
@@ -9,6 +8,8 @@ import tempfile
 import threading
 import time
 import urllib.parse
+from http.server import BaseHTTPRequestHandler
+from http.server import HTTPServer
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -18,7 +19,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.40"
+BUILD_VERSION: str = "v0.0.41"
 
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
@@ -46,6 +47,10 @@ GHOST_PORT: int = int(_ghost_port)
 os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 # we use sys.argv[0] because __file__ doesn't give proper results with pyinstaller
 # See: https://stackoverflow.com/a/53511380
+
+
+def get_neovim_handle():
+    return pynvim.attach("socket", path=neovim_focused_address)
 
 
 def _port_occupied(port) -> bool:
@@ -89,17 +94,7 @@ def _get_running_version(port) -> Optional[str]:
         return response.text
 
 
-def _stop_running_server(port) -> None:
-    """
-    Ask running server to stop
-
-    :param port int: Port of running server
-    """
-    response = requests.get(f"http://{LOCALHOST}:{port}/exit")
-    return response.status_code
-
-
-def _store_port() -> None:
+def store_port():
     """
     Store the port number of Server in TEMP_FILEPATH
 
@@ -108,19 +103,18 @@ def _store_port() -> None:
         file.write(str(servers.http_server.server_port))
 
 
-def _exit_script_if_server_already_running() -> None:
+def exit_if_server_already_running():
     running_port = _detect_running_port()
     if running_port is not None:
         if running_port == GHOST_PORT:
             if _get_running_version(running_port) == BUILD_VERSION:
                 print("Server already running")
                 if neovim_focused_address is not None:
-                    _handle = pynvim.attach("socket", path=neovim_focused_address)
-                    _handle.command("echom '[nvim-ghost] Server running'")
-                    _handle.close()
+                    with get_neovim_handle() as handle:
+                        handle.command("echom '[nvim-ghost] Server running'")
                 sys.exit()
         # Server is outdated. Stop it.
-        _stop_running_server(running_port)
+        requests.get(f"http://{LOCALHOST}:{running_port}/exit")
         # Wait till the server has stopped
         while True:
             if not _port_occupied(running_port):
@@ -162,7 +156,7 @@ class ArgParser:
         LOGGING_ENABLED = True
 
 
-class GhostHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
+class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
@@ -322,7 +316,7 @@ class GhostWebSocket(WebSocket):
 
     def connected(self):
         self.neovim_address = neovim_focused_address
-        self.neovim_handle = pynvim.attach("socket", path=self.neovim_address)
+        self.neovim_handle = get_neovim_handle()
         print(
             time.strftime("[%H:%M:%S]:"),
             "Connected",
@@ -360,7 +354,7 @@ class GhostWebSocket(WebSocket):
         threading.Thread(target=self._neovim_listener, daemon=True).start()
 
     def _neovim_listener(self):
-        self.loop_neovim_handle = pynvim.attach("socket", path=self.neovim_address)
+        self.loop_neovim_handle = get_neovim_handle()
         self.loop_neovim_handle.subscribe("nvim_buf_lines_event")
         self.loop_neovim_handle.subscribe("nvim_buf_detach_event")
         self.loop_neovim_handle.api.buf_attach(self.buffer_handle, False, {})
@@ -424,9 +418,7 @@ class Server:
 
     def _http_server(self):
         if not _port_occupied(GHOST_PORT):
-            return http.server.HTTPServer(
-                (LOCALHOST, GHOST_PORT), GhostHTTPRequestHandler
-            )
+            return HTTPServer((LOCALHOST, GHOST_PORT), GhostHTTPRequestHandler)
         else:
             sys.exit("Port Occupied")
 
@@ -447,7 +439,7 @@ argparser = ArgParser()
 argparser.parse_args()
 
 # Start servers
-_exit_script_if_server_already_running()
+exit_if_server_already_running()
 servers = Server()
 servers.http_server_thread.start()
 servers.websocket_server_thread.start()
@@ -461,7 +453,7 @@ print("Servers started")
 if neovim_focused_address is not None:
     with pynvim.attach("socket", path=neovim_focused_address) as _handle:
         _handle.command("echom '[nvim-ghost] Servers started'")
-_store_port()
+store_port()
 
 
 def stop_servers():
@@ -470,14 +462,14 @@ def stop_servers():
     sys.exit()
 
 
-def signal_handler(_signal, _):
+def _signal_handler(_signal, _):
     _signal_name = signal.Signals(_signal).name
     print(time.strftime("[%H:%M:%S]:"), f"Caught: {_signal_name}")
     if _signal in (signal.SIGINT, signal.SIGTERM):
         stop_servers()
 
 
-signal.signal(signal.SIGINT, signal_handler)
-signal.signal(signal.SIGTERM, signal_handler)
+signal.signal(signal.SIGINT, _signal_handler)
+signal.signal(signal.SIGTERM, _signal_handler)
 
 # vim: et ts=4 sw=4 sts=4
