@@ -17,8 +17,6 @@ if !exists('$GHOSTTEXT_SERVER_PORT')
   let $GHOSTTEXT_SERVER_PORT = 4001
 endif
 
-let s:saved_updatetime = &updatetime
-let s:can_use_cursorhold = v:false
 let s:joblog_arguments = {
       \'on_stdout':{id,data,type->nvim_ghost#joboutput_logger(data,type)},
       \'on_stderr':{id,data,type->nvim_ghost#joboutput_logger(data,type)},
@@ -69,6 +67,7 @@ function! s:send_GET_request(url) abort "{{{1
 
   " We're done, log what we sent
   call nvim_ghost#joboutput_logger(['Sent ' . a:url], '')
+  return 0
 endfunction
 
 function! nvim_ghost#start_server() abort " {{{1
@@ -84,7 +83,10 @@ function! nvim_ghost#kill_server() abort  " {{{1
 endfunction
 
 function! nvim_ghost#request_focus() abort  " {{{1
-  call s:send_GET_request('/focus?focus=' . v:servername)
+  let l:unsucessful = s:send_GET_request('/focus?focus=' . v:servername)
+  if l:unsucessful
+    call nvim_ghost#start_server()
+  endif
 endfunction
 
 function! nvim_ghost#session_closed() abort " {{{1

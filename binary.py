@@ -19,7 +19,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.41"
+BUILD_VERSION: str = "v0.0.42"
 
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
@@ -240,6 +240,8 @@ class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
         if neovim_focused_address != address:
             neovim_focused_address = address
             print(time.strftime("[%H:%M:%S]:"), f"Focus {address}")
+        if not CONNECTED_NEOVIM_ADDRESSES.__contains__(address):
+            CONNECTED_NEOVIM_ADDRESSES.append(address)
 
     def _session_closed_responder(self, query_string):
         """
@@ -258,6 +260,10 @@ class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
         global neovim_focused_address
         if address == neovim_focused_address:
             neovim_focused_address = None
+        if len(WEBSOCKET_PER_NEOVIM_ADDRESS) == 0:
+            print(time.strftime("[%H:%M:%S]:"), "All neovim clients disconnected")
+            global stop_servers
+            stop_servers()
 
     def _respond(self, text):
         """
@@ -434,6 +440,7 @@ class Server:
 
 
 WEBSOCKET_PER_NEOVIM_ADDRESS: Dict[str, List[GhostWebSocket]] = {}
+CONNECTED_NEOVIM_ADDRESSES: List[str] = []
 
 argparser = ArgParser()
 argparser.parse_args()
@@ -451,6 +458,7 @@ if LOGGING_ENABLED:
     print(f"binary {BUILD_VERSION}")
 print("Servers started")
 if neovim_focused_address is not None:
+    CONNECTED_NEOVIM_ADDRESSES.append(neovim_focused_address)
     with pynvim.attach("socket", path=neovim_focused_address) as _handle:
         _handle.command("echom '[nvim-ghost] Servers started'")
 store_port()

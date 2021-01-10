@@ -24,7 +24,7 @@ endif
 
 augroup nvim_ghost
   autocmd!
-  autocmd UIEnter     * call nvim_ghost#start_server()
+  autocmd UIEnter     * call nvim_ghost#start_server() | call nvim_ghost#request_focus()
   autocmd FocusGained * call nvim_ghost#request_focus()
   autocmd VimLeavePre * call nvim_ghost#session_closed()
 augroup END
@@ -37,7 +37,10 @@ if !exists('#nvim_ghost_user_autocommands')
 endif
 
 " Compatibility for terminals that do not support focus
-" Uses CursorMoved to detect focus
+" Uses CursorMoved to detect focus, and CursorHold to detect un-focus
+
+" For terminal's which do support focus, it is advisable to tell the user to
+" set "let g:_nvim_ghost_supports_focus = 1" in their init.vim
 
 if !exists('g:_nvim_ghost_supports_focus')
   let g:_nvim_ghost_supports_focus = 0
