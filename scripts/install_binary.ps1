@@ -4,7 +4,7 @@ $rootDir = Resolve-Path -Path ((Split-Path $myInvocation.MyCommand.Path) + "\.."
 $version = Get-Content "$rootDir\.binary_version"
 $assetName = "nvim-ghost-win64.zip"
 $assetPath = "$rootDir\$assetName"
-$outFile = "$rootDir\binary.exe"
+$outFile = "$rootDir\nvim-ghost-binary.exe"
 
 if (Test-Path $assetName) {
   rm "$assetName"

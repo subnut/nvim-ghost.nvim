@@ -19,14 +19,14 @@ ROOT_DIR=$(
 )
 cd "$ROOT_DIR"
 
-if [ -e binary ]; then
-  rm -f binary
-fi
-
 OS="$(uname)"
-OUTFILE="$ROOT_DIR/binary"
+OUTFILE="$ROOT_DIR/nvim-ghost-binary"
 PKG_VERSION=$(cat "$ROOT_DIR/.binary_version")
 RELEASE_URL="https://github.com/subnut/nvim-ghost.nvim/releases/download/$PKG_VERSION"
+
+if [ -e $OUTFILE ]; then
+  rm -f $OUTFILE
+fi
 
 if [ "$OS" = 'Darwin' ]; then
   TARGET="nvim-ghost-macos"

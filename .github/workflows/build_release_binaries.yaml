@@ -18,17 +18,17 @@ jobs:
             target: macos
             asset_name: nvim-ghost-macos.tar.gz
             asset_path: binary.tar.gz
-            packaging_command: tar -czf binary.tar.gz binary
+            packaging_command: tar -czf binary.tar.gz nvim-ghost-binary
           - os: ubuntu-latest
             target: linux
             asset_name: nvim-ghost-linux.tar.gz
             asset_path: binary.tar.gz
-            packaging_command: tar -czf binary.tar.gz binary
+            packaging_command: tar -czf binary.tar.gz nvim-ghost-binary
           - os: windows-latest
             target: win
             asset_name: nvim-ghost-win64.zip
             asset_path: binary.zip
-            packaging_command: 7z a -tzip binary.zip binary.exe
+            packaging_command: 7z a -tzip binary.zip nvim-ghost-binary.exe
     runs-on : ${{ matrix.os }}
     steps:
       - name: Checkout
@@ -47,7 +47,7 @@ jobs:
           python setup.py install
           cd ..
       - name: Build binary
-        run: pyinstaller --onefile --distpath . binary.py
+        run: pyinstaller --onefile --distpath . binary.py --name nvim-ghost-binary
       - name: Build package
         run: ${{ matrix.packaging_command }}
       - name: Get release
