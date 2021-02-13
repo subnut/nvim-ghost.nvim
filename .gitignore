@@ -1,7 +1,7 @@
 __pycache__
 build
-binary
-binary.exe
+nvim-ghost-binary
+nvim-ghost-binary.exe
 binary.spec
 *.log
 venv
