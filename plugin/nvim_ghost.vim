@@ -2,6 +2,10 @@ if !has('nvim')
   finish
 endif
 
+if get(g:,'nvim_ghost_disabled', 0)
+  finish
+endif
+
 if $NVIM_LISTEN_ADDRESS != v:servername
   let $NVIM_LISTEN_ADDRESS = v:servername
 endif
