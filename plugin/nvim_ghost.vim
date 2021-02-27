@@ -2,21 +2,27 @@ if !has('nvim')
   finish
 endif
 
-if get(g:,'nvim_ghost_disabled', 0)
-  finish
-endif
-
-if $NVIM_LISTEN_ADDRESS != v:servername
-  let $NVIM_LISTEN_ADDRESS = v:servername
-endif
-
 let g:nvim_ghost_installation_dir = expand('<sfile>:h:h')
 let g:nvim_ghost_binary_path  =  g:nvim_ghost_installation_dir . (has('win32') ? '\nvim-ghost-binary.exe' :  '/nvim-ghost-binary')
 let g:nvim_ghost_script_path  =  g:nvim_ghost_installation_dir . (has('win32') ? '\scripts' :  '/scripts')
 let g:nvim_ghost_logging_enabled = get(g:,'nvim_ghost_logging_enabled', 0)
 
+if get(g:,'nvim_ghost_disabled',0)
+  let s:filename = expand('<sfile>:p')
+  command! GhostTextEnable
+        \  let g:nvim_ghost_disabled = 0
+        \| execute('source '.s:filename)
+        \| doau <nomodeline> nvim_ghost UIEnter
+        \| delcommand GhostTextEnable
+  finish
+endif
+
 if g:nvim_ghost_logging_enabled
   let $NVIM_GHOST_LOGGING_ENABLED = 1
+endif
+
+if $NVIM_LISTEN_ADDRESS != v:servername
+  let $NVIM_LISTEN_ADDRESS = v:servername
 endif
 
 if !filereadable(g:nvim_ghost_binary_path)
