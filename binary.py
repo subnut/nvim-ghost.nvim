@@ -19,7 +19,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.0.42"
+BUILD_VERSION: str = "v0.0.43"
 
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
@@ -33,10 +33,10 @@ _ghost_port: str = os.environ.get("GHOSTTEXT_SERVER_PORT", "4001")
 
 if not _ghost_port.isdigit():
     if neovim_focused_address is not None:
-        with pynvim.attach("socket", path=neovim_focused_address) as _handle:
-            # fmt: off
-            _handle.command("echom '[nvim-ghost] Invalid port. Please set $GHOSTTEXT_SERVER_PORT to a valid port.'")  # noqa
-            # fmt: on
+        with pynvim.attach("socket", path=neovim_focused_address) as nvim_handle:
+            nvim_handle.command(
+                "echom '[nvim-ghost] Invalid port. Please set $GHOSTTEXT_SERVER_PORT to a valid port.'"  # noqa
+            )
     sys.exit("Port must be a number")
 GHOST_PORT: int = int(_ghost_port)
 
@@ -49,7 +49,7 @@ os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 # See: https://stackoverflow.com/a/53511380
 
 
-def get_neovim_handle():
+def get_neovim_handle() -> pynvim.Nvim:
     return pynvim.attach("socket", path=neovim_focused_address)
 
 
@@ -137,7 +137,7 @@ class ArgParser:
         # GET requests to make to the running server
         self.server_requests = []
 
-    def parse_args(self, args=sys.argv[1:]):
+    def parse_args(self, args: List[str] = sys.argv[1:]):
         for index, argument in enumerate(args):
             if argument in self.argument_handlers:
                 self.argument_handlers[argument]()
@@ -272,51 +272,55 @@ class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
 
 
 class GhostWebSocket(WebSocket):
+    # New message received
     def handle(self):
+        # Log
         print(time.strftime("[%H:%M:%S]:"), f"{self.address[1]} got", self.data)
 
-        # Don't handle the next nvim_buf_lines_event
-        self._handle_neovim_notifications = False
-
-        neovim_handle = self.neovim_handle
+        # Extract the data
         data = json.loads(self.data)
-        _filetype = data["syntax"]
-        _url = data["url"]
-        _text: str = data["text"]
-        _text_split = _text.split("\n")
+        filetype = data["syntax"]
+        url = data["url"]
+        text = data["text"]
+        text_split = text.split("\n")
+
+        # Set the buffer text
+        neovim_handle = self.neovim_handle
         buffer_handle = self.buffer_handle
-        neovim_handle.api.buf_set_lines(buffer_handle, 0, -1, 0, _text_split)
+        neovim_handle.api.buf_set_lines(buffer_handle, 0, -1, 0, text_split)
+
+        # Don't handle the next nvim_buf_lines_event until we're done
+        self.handle_neovim_notifications = False
 
         # Save the text that we just set. So that, if a nvim_buf_lines_event
-        # wants to sent the exact same text, we can stop it.  i.e. mitigate
-        # race condition even more
-        self._last_set_text = _text
+        # wants to sent the exact same text, we can stop it.
+        self.last_set_text = text
 
         if not self.handled_first_message:
             # We hadn't handled the first message yet.
             # i.e. this is the first message, and we have already handled it.
-            # So we _have_ handled the first message, you buffoon.
+            # So we _have_ handled the first message, you idiot.
             self.handled_first_message = True
             # Since this is the first message, it means we haven't set the
             # filetype yet. So, let's set the filetype now.
-            neovim_handle.api.buf_set_option(buffer_handle, "filetype", _filetype)
-            self._trigger_autocmds(_url)
-            self._last_set_filetype = _filetype
+            neovim_handle.api.buf_set_option(buffer_handle, "filetype", filetype)
+            self._trigger_autocmds(url)
+            self.last_set_filetype = filetype
 
-        if not _filetype == self._last_set_filetype:
-            # The filetype has changed in the browser
+        if not filetype == self.last_set_filetype:
+            # i.e. the filetype has changed in the browser
             handle = neovim_handle
             buffer = buffer_handle
             currently_set_filetype = handle.api.buf_get_option(buffer, "filetype")
-            if self._last_set_filetype == currently_set_filetype:
+            if self.last_set_filetype == currently_set_filetype:
                 # user hasn't set a custom filetype
-                neovim_handle.api.buf_set_option(buffer_handle, "filetype", _filetype)
-                self._last_set_filetype = _filetype
-                self._trigger_autocmds(_url)
+                neovim_handle.api.buf_set_option(buffer_handle, "filetype", filetype)
+                self.last_set_filetype = filetype
+                self._trigger_autocmds(url)
 
+    # New connection
     def connected(self):
-        self.neovim_address = neovim_focused_address
-        self.neovim_handle = get_neovim_handle()
+        # Log
         print(
             time.strftime("[%H:%M:%S]:"),
             "Connected",
@@ -324,27 +328,41 @@ class GhostWebSocket(WebSocket):
             "to",
             self.neovim_address,
         )
+
+        # Create and setup the buffer
+        self.neovim_address = neovim_focused_address
+        self.neovim_handle = get_neovim_handle()
         self.buffer_handle = self.neovim_handle.api.create_buf(False, True)
         self.neovim_handle.api.buf_set_option(self.buffer_handle, "bufhidden", "wipe")
         self.neovim_handle.command(f"tabe | {self.buffer_handle.number}buffer")
-        self._handle_neovim_notifications = True
+        self.handle_neovim_notifications = True
         self._start_neovim_listener()
+
+        # Add it to the records
         global WEBSOCKET_PER_NEOVIM_ADDRESS
         if not WEBSOCKET_PER_NEOVIM_ADDRESS.__contains__(self.neovim_address):
             WEBSOCKET_PER_NEOVIM_ADDRESS[self.neovim_address] = []
         WEBSOCKET_PER_NEOVIM_ADDRESS[self.neovim_address].append(self)
+
+        # Since it's a new connection, we haven't handled the first message yet
         self.handled_first_message = False
 
+    # Connection closed
     def handle_close(self):
+        # Log
         print(
             time.strftime("[%H:%M:%S]:"),
             ":".join([str(_) for _ in self.address]),
             "websocket closed",
         )
+
+        # Delete buffer and stop event loop
         self.neovim_handle.command(f"bdelete {self.buffer_handle.number}")
         self.neovim_handle.close()
         self.loop_neovim_handle.stop_loop()
         self.loop_neovim_handle.close()
+
+        # Check and delete the associated records
         global WEBSOCKET_PER_NEOVIM_ADDRESS
         WEBSOCKET_PER_NEOVIM_ADDRESS[self.neovim_address].remove(self)
         if len(WEBSOCKET_PER_NEOVIM_ADDRESS[self.neovim_address]) == 0:
@@ -361,36 +379,57 @@ class GhostWebSocket(WebSocket):
         self.loop_neovim_handle.run_loop(None, self._neovim_handler)
 
     def _neovim_handler(self, *args):
-        if not self._handle_neovim_notifications:
-            # Resume handling notifications. We have received the notification
-            # caused by the change caused by ourselves.
-            self._handle_neovim_notifications = True
-            # This notification was caused by us changing the buffer text.
-            # Don't handle it.
+        if not self.handle_neovim_notifications:
+            # Resume handling notifications, because this notification has been
+            # triggered by the buffer changes we have done above.
+            self.handle_neovim_notifications = True
+            # Because this notification was caused by our changes, we are not
+            # interested in handling it. It is of zero significance to us.
             return
+
+        # Fetch the event name
         event = args[0]
+
         if event == "nvim_buf_detach_event":
+            # Buffer has been closed by user. Close the connection.
             self.close()
+
         if event == "nvim_buf_lines_event":
+            # Buffer text has been changed by user.
+            # Get the buffer contents
             handle = self.loop_neovim_handle
-            text = handle.api.buf_get_lines(self.buffer_handle, 0, -1, False)
-            text = "\n".join(text)
-            if self._last_set_text is not None:
-                if text == self._last_set_text:
-                    # We are going to send the text that we just set! Stop!
-                    # Mitigation for race condition
+            buffer_contents = handle.api.buf_get_lines(self.buffer_handle, 0, -1, False)
+
+            # Turn buffer_contents (a List) to a string
+            text = "\n".join(buffer_contents)
+
+            # Check if this is the same text we just set!
+            if self.last_set_text is not None:
+                if text == self.last_set_text:
+                    # We are trying to send the text that we just set! Stop!
                     return
-                # Text has been changed by user. _last_set_text is now outdated
-                # and invalid.
-                self._last_set_text = None
+                # Text has been changed by user.
+                # last_set_text is now outdated and invalid.
+                self.last_set_text = None
+
+            # Send the text
             self._send_text(text)
 
-    def _send_text(self, text):
-        text = json.dumps({"text": str(text), "selections": []})
-        self.send_message(text)
-        print(time.strftime("[%H:%M:%S]:"), f"{self.address[1]} sent", text)
+    def _send_text(self, text: str):
+        # NOTE: Just satisfying the protocol for now.
+        # I still don't know how to extract 'selections' from neovim
+        # Heck, I don't even know what this thing is supposed to do!
+        selections: List[Dict[str:int]] = []
+        selections.append({"start": 0, "end": 0})
 
-    def _trigger_autocmds(self, url):
+        # Construct and send the message
+        message = json.dumps({"text": text, "selections": selections})
+        self.send_message(message)
+
+        # Log
+        print(time.strftime("[%H:%M:%S]:"), f"{self.address[1]} sent", message)
+
+    def _trigger_autocmds(self, url: str):
         self.neovim_handle.command(f"doau nvim_ghost_user_autocommands User {url}")
 
 
@@ -451,8 +490,8 @@ if LOGGING_ENABLED:
     print(f"binary {BUILD_VERSION}")
 print("Servers started")
 if neovim_focused_address is not None:
-    with pynvim.attach("socket", path=neovim_focused_address) as _handle:
-        _handle.command("echom '[nvim-ghost] Servers started'")
+    with pynvim.attach("socket", path=neovim_focused_address) as nvim_handle:
+        nvim_handle.command("echom '[nvim-ghost] Servers started'")
 store_port()
 
 
