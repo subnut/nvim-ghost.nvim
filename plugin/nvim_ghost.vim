@@ -34,7 +34,7 @@ endif
 
 augroup nvim_ghost
   autocmd!
-  autocmd UIEnter     * call nvim_ghost#start_server()
+  autocmd UIEnter     * call nvim_ghost#start_server() | call nvim_ghost#request_focus()
   autocmd FocusGained * call nvim_ghost#request_focus()
   autocmd VimLeavePre * call nvim_ghost#session_closed()
 augroup END
