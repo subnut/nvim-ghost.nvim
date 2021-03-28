@@ -26,8 +26,9 @@ Really, it's _that_ simple!
 ## Features
 
 - **Zero** dependencies! Does not even need python installed!
-- Supports Linux, macOS, **Windows**
 - Supports **neovim running inside WSL** (Windows Subsystem for Linux)
+- Supports Linux, macOS, **Windows** out-of-the-box
+  (_for other OSes, please see below_)
 
 ## Customization
 
@@ -70,3 +71,35 @@ augroup nvim_ghost_user_autocommands
   au User *github.com set filetype=markdown
 augroup END
 ```
+
+<br>
+
+## Other Operating Systems
+Please understand my situation. This plugin primarily uses a binary with it's
+own packaged version of python3 and comes with the required packages
+pre-installed, but the binary itself needs to be made on a machine running the
+same OS as the target machine. (i.e. the Linux binary needs to be built on a
+Linux machine, macOS binary on macOS, etc.)
+
+The binaries are made using GitHub Actions, which only provides Linux, Windows
+and macOS containers. So, it is impossible for me to distribute binaries for
+other OSes.
+
+So, to use this plugin, you shall need to install python3 (with pip) in your
+system. Then, head off to this plugin's directory, and run -
+```
+python -m pip install -r requirements.txt
+```
+This needs to be done only once. This command installs the required packages
+from pip.
+
+Next, add the following two lines to your `init.vim` -
+```vim
+let g:nvim_ghost_use_script = 1
+let g:nvim_ghost_python_executable = '/usr/bin/python'
+```
+Replace `/usr/bin/python` with the absolute path of the python executable
+installed in your system. Now, restart neovim, and the plugin should work.
+
+If you face any problems, please open an issue. I will try my best to work out
+a solution for you.
