@@ -75,7 +75,14 @@ function! nvim_ghost#start_server() abort " {{{1
   if has('win32')
     call jobstart(['cscript.exe', g:nvim_ghost_script_path.'\start_server.vbs'])
   else
-    call jobstart([g:nvim_ghost_binary_path], s:joblog_arguments_nokill)
+    if get(g:, 'nvim_ghost_use_script', 0)
+      call jobstart(
+            \[g:nvim_ghost_python_executable, g:nvim_ghost_binary_path],
+            \s:joblog_arguments_nokill
+            \)
+    else
+      call jobstart([g:nvim_ghost_binary_path], s:joblog_arguments_nokill)
+    endif
   endif
 endfunction
 
@@ -108,4 +115,4 @@ function! nvim_ghost#joboutput_logger(data,type) abort  " {{{1
   endif
 endfunction "}}}1
 
-" vim: et ts=2 fdm=marker
+" vim: et ts=2 sts=0 sw=0 fdm=marker

@@ -35,7 +35,8 @@ if not _ghost_port.isdigit():
     if neovim_focused_address is not None:
         with pynvim.attach("socket", path=neovim_focused_address) as nvim_handle:
             nvim_handle.command(
-                "echom '[nvim-ghost] Invalid port. Please set $GHOSTTEXT_SERVER_PORT to a valid port.'"  # noqa
+                "echom '[nvim-ghost] Invalid port. "
+                "Please set $GHOSTTEXT_SERVER_PORT to a valid port.'" 
             )
     sys.exit("Port must be a number")
 GHOST_PORT: int = int(_ghost_port)

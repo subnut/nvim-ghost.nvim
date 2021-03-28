@@ -7,6 +7,23 @@ let g:nvim_ghost_binary_path  =  g:nvim_ghost_installation_dir . (has('win32') ?
 let g:nvim_ghost_script_path  =  g:nvim_ghost_installation_dir . (has('win32') ? '\scripts' :  '/scripts')
 let g:nvim_ghost_logging_enabled = get(g:,'nvim_ghost_logging_enabled', 0)
 
+if get(g:,'nvim_ghost_use_script', 0)
+  if has('win32')
+    echohl WarningMsg
+    echom 'Sorry, g:nvim_ghost_use_script is currently not available on
+          \ Windows. Please remove it from your init.vim to use nvim-ghost.'
+    echohl None
+    finish
+  endif
+  if !exists('g:nvim_ghost_python_executable')
+    echohl WarningMsg
+    echom 'Please set g:nvim_ghost_python_executable
+          \ to the location of the python executable'
+    echohl None
+    finish
+  endif
+endif
+
 if get(g:,'nvim_ghost_disabled',0)
   let s:filename = expand('<sfile>:p')
   command! GhostTextEnable
@@ -72,4 +89,4 @@ if !exists('g:_nvim_ghost_supports_focus')
   endfun
 endif
 
-" vim: et ts=2
+" vim: et ts=2 sts=0 sw=0 nowrap
