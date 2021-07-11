@@ -16,7 +16,7 @@ function! nvim_ghost#installer#install() abort
 
   if filereadable(l:binary_path)
     let l:downloaded_version = systemlist(shellescape(l:binary_path) . ' --version')[0]
-    let l:needed_version = readfile(l:installation_dir . '/.binary_version')[0]
+    let l:needed_version = readfile(l:installation_dir . '/binary_version')[0]
     if l:needed_version =~# trim(l:downloaded_version)
       echom '[nvim-ghost] Binary up-to-date'
       return 0

@@ -21,7 +21,7 @@ cd "$ROOT_DIR"
 
 OS="$(uname)"
 OUTFILE="$ROOT_DIR/nvim-ghost-binary"
-PKG_VERSION=$(cat "$ROOT_DIR/.binary_version")
+PKG_VERSION=$(cat "$ROOT_DIR/binary_version")
 RELEASE_URL="https://github.com/subnut/nvim-ghost.nvim/releases/download/$PKG_VERSION"
 
 if [ -e $OUTFILE ]; then

@@ -1,7 +1,7 @@
 echo "Preparing to download nvim-ghost binary..."
 
 $rootDir = Resolve-Path -Path ((Split-Path $myInvocation.MyCommand.Path) + "\..")
-$version = Get-Content "$rootDir\.binary_version"
+$version = Get-Content "$rootDir\binary_version"
 $assetName = "nvim-ghost-win64.zip"
 $assetPath = "$rootDir\$assetName"
 $outFile = "$rootDir\nvim-ghost-binary.exe"
