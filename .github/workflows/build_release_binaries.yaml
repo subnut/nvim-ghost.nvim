@@ -36,7 +36,9 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
       - name: Setup dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install wheel
+          pip install -r requirements.txt
       - name: Setup pyinstaller
         run: |
           git clone https://github.com/pyinstaller/pyinstaller --depth 1
