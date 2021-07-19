@@ -6,6 +6,7 @@ let g:nvim_ghost_installation_dir = expand('<sfile>:h:h')
 let g:nvim_ghost_binary_path  =  g:nvim_ghost_installation_dir . (has('win32') ? '\nvim-ghost-binary.exe' :  '/nvim-ghost-binary')
 let g:nvim_ghost_script_path  =  g:nvim_ghost_installation_dir . (has('win32') ? '\scripts' :  '/scripts')
 let g:nvim_ghost_logging_enabled = get(g:,'nvim_ghost_logging_enabled', 0)
+let g:nvim_ghost_super_quiet = get(g:,'nvim_ghost_super_quiet', 0)
 
 if get(g:,'nvim_ghost_use_script', 0)
   if has('win32')
@@ -36,6 +37,10 @@ endif
 
 if g:nvim_ghost_logging_enabled
   let $NVIM_GHOST_LOGGING_ENABLED = 1
+endif
+
+if g:nvim_ghost_super_quiet
+  let $NVIM_GHOST_SUPER_QUIET = 1
 endif
 
 if $NVIM_LISTEN_ADDRESS != v:servername

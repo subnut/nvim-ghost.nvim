@@ -51,9 +51,11 @@ function! s:send_GET_request(url) abort "{{{1
   let v:errmsg = ''
   silent! let l:connection = sockconnect('tcp', l:url, l:opts)
   if v:errmsg !=# '' || l:connection == 0
-    echohl WarningMsg
-    echom '[nvim-ghost] Could not connect to ' . l:url
-    echohl None
+    if g:nvim_ghost_super_quiet != 1
+      echohl WarningMsg
+      echom '[nvim-ghost] Could not connect to ' . l:url
+      echohl None
+    endif
     return 1
   endif
 

@@ -19,13 +19,14 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.1"
+BUILD_VERSION: str = "v0.1.1"
 
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
 LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
 LOGGING_ENABLED: bool = bool(os.environ.get("NVIM_GHOST_LOGGING_ENABLED", False))
+SUPER_QUIET: bool = bool(os.environ.get("NVIM_GHOST_SUPER_QUIET", False))
 
 neovim_focused_address: Optional[str] = os.environ.get("NVIM_LISTEN_ADDRESS", None)
 _ghost_port: str = os.environ.get("GHOSTTEXT_SERVER_PORT", "4001")
@@ -34,10 +35,11 @@ _ghost_port: str = os.environ.get("GHOSTTEXT_SERVER_PORT", "4001")
 if not _ghost_port.isdigit():
     if neovim_focused_address is not None:
         with pynvim.attach("socket", path=neovim_focused_address) as nvim_handle:
-            nvim_handle.command(
-                "echom '[nvim-ghost] Invalid port. "
-                "Please set $GHOSTTEXT_SERVER_PORT to a valid port.'"
-            )
+            if not SUPER_QUIET:
+                nvim_handle.command(
+                    "echom '[nvim-ghost] Invalid port. "
+                    "Please set $GHOSTTEXT_SERVER_PORT to a valid port.'"
+                )
     sys.exit("Port must be a number")
 GHOST_PORT: int = int(_ghost_port)
 
@@ -112,7 +114,8 @@ def exit_if_server_already_running():
                 print("Server already running")
                 if neovim_focused_address is not None:
                     with get_neovim_handle() as handle:
-                        handle.command("echom '[nvim-ghost] Server running'")
+                        if not SUPER_QUIET:
+                            handle.command("echom '[nvim-ghost] Server running'")
                 sys.exit()
         # Server is outdated. Stop it.
         requests.get(f"http://{LOCALHOST}:{running_port}/exit")
@@ -492,7 +495,8 @@ if LOGGING_ENABLED:
 print("Servers started")
 if neovim_focused_address is not None:
     with pynvim.attach("socket", path=neovim_focused_address) as nvim_handle:
-        nvim_handle.command("echom '[nvim-ghost] Servers started'")
+        if not SUPER_QUIET:
+            nvim_handle.command("echom '[nvim-ghost] Servers started'")
 store_port()
 
 
