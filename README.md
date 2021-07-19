@@ -72,6 +72,15 @@ augroup nvim_ghost_user_autocommands
 augroup END
 ```
 
+### Suppressing all messages
+
+If you want to suppress _all_ messages from nvim-ghost, then add the following
+to your `init.vim` -
+```vim
+let g:nvim_ghost_super_quiet = 1
+```
+
+
 <br>
 
 ## Other Operating Systems
