@@ -1,0 +1,73 @@
+name: Turn Pre-release into Release
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  check:
+    name: Check if latest tag's release is pre-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Get releases
+        run: curl "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases" -o releases.json
+      - name: Check if $(cat binary_version) is a pre-release
+        run: |
+          python <<EOF
+          import json
+          import sys
+          with open('releases.json') as file:
+            releases = json.loads(file.read())
+          with open('binary_version') as file:
+            version = file.read().strip()
+          for release in releases:
+            if release["tag_name"] == version:
+              if release["prerelease"]:
+                print(f"{release['tag_name']} is a Pre-release")
+                sys.exit(1)
+              else:
+                print(f"{release['tag_name']} is a Release")
+                sys.exit(0)
+          else:
+            print(f"{version} release not found")
+          EOF
+  convert:
+    needs: check
+    if: ${{ !success() || cancelled() }}
+    name: Convert pre-release to release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Get releases
+        run: |
+          curl "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases" -o releases.json
+          cat releases.json
+      - name: Find release id
+        run: |
+          python <<EOF
+          import json
+          import sys
+          with open('releases.json') as file:
+            releases = json.loads(file.read())
+          with open('binary_version') as file:
+            version = file.read().strip()
+          for release in releases:
+            if release["tag_name"] == version:
+              print(release["id"])
+              with open('release_id', 'w') as file:
+                file.write(f"{release['id']}")
+          EOF
+      - name: Convert
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cat release_id
+          curl -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -X 'PATCH' \
+            -d '{"prerelease":false}' \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/$(cat release_id)" 2>/dev/null
+

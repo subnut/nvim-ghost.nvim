@@ -12,7 +12,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           curl -H "Authorization: token $GITHUB_TOKEN" \
-            "$GITHUB_API_URL/repos/subnut/nvim-ghost.nvim/releases" -o releases.json
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases" -o releases.json
+          cat releases.json
       - name: Find draft releases
         run: |
           python <<EOF
@@ -43,6 +44,6 @@ jobs:
           curl -H "Authorization: token $GITHUB_TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             -X 'DELETE' \
-            "$GITHUB_API_URL/repos/subnut/nvim-ghost.nvim/releases/\$ID" 2>/dev/null
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/\$ID" 2>/dev/null
           done
           EOF
