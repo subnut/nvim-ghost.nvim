@@ -1,0 +1,48 @@
+name: Delete draft releases
+on:
+  delete
+
+jobs:
+  delete:
+    name: Delete releases
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get all releases as JSON
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          curl -H "Authorization: token $GITHUB_TOKEN" \
+            https://api.github.com/repos/subnut/nvim-ghost.nvim/releases -o releases.json
+      - name: Find draft releases
+        run: |
+          python <<EOF
+          import json
+          import sys
+          with open('releases.json') as file:
+            releases = json.loads(file.read())
+          draft_releases = [release["id"] for release in releases if release["draft"]]
+          if not len(draft_releases) == 0:
+            with open('draft_releases', 'w') as file:
+              for id in draft_releases:
+                print(id)
+                file.write(f"{id}\n")
+          EOF
+      - name: Delete draft releases, if any
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sh <<EOF
+          if test -f draft_releases
+          then :
+          else
+            echo 'draft_releases: file not found'
+            exit 0
+          fi
+          cat draft_releases | while read ID; do
+          echo "\$ID"
+          curl -H "Authorization: token $GITHUB_TOKEN" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -X 'DELETE' \
+            "https://api.github.com/repos/subnut/nvim-ghost.nvim/releases/\$ID" 2>/dev/null
+          done
+          EOF
