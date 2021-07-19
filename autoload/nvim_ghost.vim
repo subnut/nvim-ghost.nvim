@@ -19,7 +19,7 @@ endif
 
 let s:saved_updatetime = &updatetime
 let s:can_use_cursorhold = v:false
-let s:joblog_arguments = {
+let s:joblog_arguments = !g:nvim_ghost_logging_enabled ? {} : {
       \'on_stdout':{id,data,type->nvim_ghost#joboutput_logger(data,type)},
       \'on_stderr':{id,data,type->nvim_ghost#joboutput_logger(data,type)},
       \}
@@ -98,9 +98,6 @@ function! nvim_ghost#session_closed() abort " {{{1
   call s:send_GET_request('/session-closed?session=' . v:servername)
 endfunction
 function! nvim_ghost#joboutput_logger(data,type) abort  " {{{1
-  if !g:nvim_ghost_logging_enabled
-    return
-  endif
   if a:type ==# 'stderr'
     echohl WarningMsg
   endif
