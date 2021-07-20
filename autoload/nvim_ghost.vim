@@ -100,6 +100,9 @@ function! nvim_ghost#session_closed() abort " {{{1
   call s:send_GET_request('/session-closed?session=' . v:servername)
 endfunction
 function! nvim_ghost#joboutput_logger(data,type) abort  " {{{1
+  if !g:nvim_ghost_logging_enabled || g:nvim_ghost_super_quiet
+    return
+  endif
   if a:type ==# 'stderr'
     echohl WarningMsg
   endif
