@@ -75,11 +75,12 @@ endfunction
 
 function! nvim_ghost#start_server() abort " {{{1
   if has('win32')
-    call jobstart(['cscript.exe', g:nvim_ghost_script_path.'\start_server.vbs'])
+    call jobstart(['cscript.exe',
+          \g:nvim_ghost_scripts_dir . 'start_server.vbs'])
   else
     if get(g:, 'nvim_ghost_use_script', 0)
       call jobstart(
-            \[g:nvim_ghost_python_executable, g:nvim_ghost_binary_path],
+            \[g:nvim_ghost_python_executable, g:nvim_ghost_script_path],
             \s:joblog_arguments_nokill
             \)
     else

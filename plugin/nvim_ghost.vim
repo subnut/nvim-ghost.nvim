@@ -3,8 +3,9 @@ if !has('nvim')
 endif
 
 let g:nvim_ghost_installation_dir = expand('<sfile>:h:h')
-let g:nvim_ghost_binary_path  =  g:nvim_ghost_installation_dir . (has('win32') ? '\nvim-ghost-binary.exe' :  '/nvim-ghost-binary')
-let g:nvim_ghost_script_path  =  g:nvim_ghost_installation_dir . (has('win32') ? '\scripts' :  '/scripts')
+let g:nvim_ghost_script_path =  g:nvim_ghost_installation_dir . (has('win32') ? '\binary.py' :  '/binary.py')
+let g:nvim_ghost_binary_path =  g:nvim_ghost_installation_dir . (has('win32') ? '\nvim-ghost-binary.exe' :  '/nvim-ghost-binary')
+let g:nvim_ghost_scripts_dir =  g:nvim_ghost_installation_dir . (has('win32') ? '\scripts\' :  '/scripts/')
 let g:nvim_ghost_logging_enabled = get(g:,'nvim_ghost_logging_enabled', 0)
 let g:nvim_ghost_super_quiet = get(g:,'nvim_ghost_super_quiet', 0)
 

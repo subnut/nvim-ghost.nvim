@@ -11,11 +11,10 @@ endfunction
 
 
 function! nvim_ghost#installer#install() abort
-  let l:binary_path = g:nvim_ghost_binary_path
   let l:installation_dir = fnamemodify(g:nvim_ghost_binary_path, ':h')
 
-  if filereadable(l:binary_path)
-    let l:downloaded_version = systemlist(shellescape(l:binary_path) . ' --version')[0]
+  if filereadable(g:nvim_ghost_binary_path)
+    let l:downloaded_version = systemlist(shellescape(g:nvim_ghost_binary_path) . ' --version')[0]
     let l:needed_version = readfile(l:installation_dir . '/binary_version')[0]
     if l:needed_version =~# trim(l:downloaded_version)
       echom '[nvim-ghost] Binary up-to-date'
@@ -27,10 +26,11 @@ function! nvim_ghost#installer#install() abort
     let l:term_height = 8
     let l:command = (executable('pwsh.exe') ? 'pwsh.exe' : 'powershell.exe')
           \. ' -Command '
-          \. shellescape('Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process -Force; & ' . shellescape(l:installation_dir . '/scripts/install_binary.ps1'))
+          \. shellescape('Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process -Force; & '
+          \. shellescape(g:nvim_ghost_scripts_dir . 'install_binary.ps1'))
   else
     let l:term_height = 4
-    let l:command = fnameescape(l:installation_dir) . '/scripts/install_binary.sh'
+    let l:command = g:nvim_ghost_scripts_dir . 'install_binary.sh'
   endif
 
 
