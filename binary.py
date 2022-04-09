@@ -19,7 +19,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.1.2"
+BUILD_VERSION: str = "v0.2.0"
 
 # TEMP_FILEPATH is used to store the port of the currently running server
 TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
@@ -197,7 +197,7 @@ class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
         # So {{ translates to a single literal {
         payload = f"""\
 {{
-  "ProtocolVersion": 1,
+  "ProtocolVersion": 2,
   "WebSocketPort": {servers.websocket_server.port}
 }}"""
         self.send_response(200)
@@ -281,46 +281,35 @@ class GhostWebSocket(WebSocket):
         # Log
         print(time.strftime("[%H:%M:%S]:"), f"{self.address[1]} got", self.data)
 
-        # Extract the data
-        data = json.loads(self.data)
-        filetype = data["syntax"]
-        url = data["url"]
-        text = data["text"]
-        text_split = text.split("\n")
-
-        # Set the buffer text
+        # Get handles
         neovim_handle = self.neovim_handle
         buffer_handle = self.buffer_handle
-        neovim_handle.api.buf_set_lines(buffer_handle, 0, -1, 0, text_split)
-
-        # Don't handle the next nvim_buf_lines_event until we're done
-        self.handle_neovim_notifications = False
-
-        # Save the text that we just set. So that, if a nvim_buf_lines_event
-        # wants to sent the exact same text, we can stop it.
-        self.last_set_text = text
 
         if not self.handled_first_message:
-            # We hadn't handled the first message yet.
-            # i.e. this is the first message, and we have already handled it.
-            # So we _have_ handled the first message, you idiot.
             self.handled_first_message = True
+            # Extract the data
+            data = json.loads(self.data)
+            filetype = data["syntax"]
+            url = data["url"]
             # Since this is the first message, it means we haven't set the
             # filetype yet. So, let's set the filetype now.
             neovim_handle.api.buf_set_option(buffer_handle, "filetype", filetype)
             self._trigger_autocmds(url)
-            self.last_set_filetype = filetype
+            # Our work here is done.
+            return
 
-        if not filetype == self.last_set_filetype:
-            # i.e. the filetype has changed in the browser
-            handle = neovim_handle
-            buffer = buffer_handle
-            currently_set_filetype = handle.api.buf_get_option(buffer, "filetype")
-            if self.last_set_filetype == currently_set_filetype:
-                # user hasn't set a custom filetype
-                neovim_handle.api.buf_set_option(buffer_handle, "filetype", filetype)
-                self.last_set_filetype = filetype
-                self._trigger_autocmds(url)
+        text = self.data
+        text_split = text.split("\n")
+
+        # Don't handle the next nvim_buf_lines_event until we're done
+        self.handle_neovim_notifications = False
+
+        # Set the buffer text
+        neovim_handle.api.buf_set_lines(buffer_handle, 0, -1, 0, text_split)
+
+        # Save the text that we just set. So that, if a nvim_buf_lines_event
+        # wants to sent the exact same text, we can stop it.
+        self.last_set_text = text
 
     # New connection
     def connected(self):
@@ -420,18 +409,8 @@ class GhostWebSocket(WebSocket):
             self._send_text(text)
 
     def _send_text(self, text: str):
-        # NOTE: Just satisfying the protocol for now.
-        # I still don't know how to extract 'selections' from neovim
-        # Heck, I don't even know what this thing is supposed to do!
-        selections: List[Dict[str:int]] = []
-        selections.append({"start": 0, "end": 0})
-
-        # Construct and send the message
-        message = json.dumps({"text": text, "selections": selections})
-        self.send_message(message)
-
-        # Log
-        print(time.strftime("[%H:%M:%S]:"), f"{self.address[1]} sent", message)
+        self.send_message(text)
+        print(time.strftime("[%H:%M:%S]:"), f"{self.address[1]} sent", text)
 
     def _trigger_autocmds(self, url: str):
         self.neovim_handle.command(f"doau nvim_ghost_user_autocommands User {url}")
