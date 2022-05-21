@@ -12,9 +12,9 @@ endfunction
 
 function! nvim_ghost#installer#install() abort
   if filereadable(g:nvim_ghost_binary_path)
-    let l:downloaded_version = systemlist(shellescape(g:nvim_ghost_binary_path) . ' --version')[0]
-    let l:needed_version = readfile(g:nvim_ghost_installation_dir . '/binary_version')[0]
-    if l:needed_version =~# trim(l:downloaded_version)
+    let l:downloaded_version = trim(systemlist(shellescape(g:nvim_ghost_binary_path) . ' --version')[0])
+    let l:needed_version = readfile(g:nvim_ghost_installation_dir . 'binary_version')[0]
+    if l:needed_version =~# l:downloaded_version
       echom '[nvim-ghost] Binary up-to-date'
       return 0
     endif
