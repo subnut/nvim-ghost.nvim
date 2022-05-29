@@ -8,9 +8,9 @@ let g:nvim_ghost_super_quiet      = get(g:,'nvim_ghost_super_quiet', 0)
 let g:nvim_ghost_logging_enabled  = get(g:,'nvim_ghost_logging_enabled', 0)
 
 " Directories (must end with g:nvim_ghost_pathsep)
-let g:nvim_ghost_installation_dir = expand('<sfile>:h:h')
-let g:nvim_ghost_scripts_dir      = g:nvim_ghost_installation_dir . 'scripts'
+let g:nvim_ghost_installation_dir   = expand('<sfile>:h:h')
 let g:nvim_ghost_installation_dir ..= g:nvim_ghost_pathsep
+let g:nvim_ghost_scripts_dir        = g:nvim_ghost_installation_dir . 'scripts'
 let g:nvim_ghost_scripts_dir      ..= g:nvim_ghost_pathsep
 
 " Files
