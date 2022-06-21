@@ -1,73 +1,67 @@
 name: Turn Pre-release into Release
 on:
+  release:
+    types:
+      - published
   push:
     branches:
       - main
+    tags:
+      - v*
 
 jobs:
+  find:
+    name: Find release
+    runs-on: ubuntu-latest
+    outputs:
+      id: ${{ steps.final_step.outputs.release_id }}
+      tag: ${{ steps.final_step.outputs.tag_name }}
+      url: ${{ steps.final_step.outputs.url }}
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v3
+        with:
+          ref: main
+      - name: Get releases
+        run: curl --no-progress-meter "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases" -o releases.json
+      - name: Find release corresponding to the $(cat binary_version) tag
+        id: final_step
+        run: |
+          jq ".[] | select(.tag_name == \"$(cat binary_version)\") | ." <releases.json >release.json
+          jq <release.json -r .tag_name
+          jq <release.json -r .id
+          jq <release.json -r .url
+          echo "::set-output name=tag_name::$(jq <release.json -r .tag_name)"
+          echo "::set-output name=release_id::$(jq <release.json -r .id)"
+          echo "::set-output name=url::$(jq <release.json -r .url)"
   check:
-    name: Check if latest tag's release is pre-release
+    name: Check if pre-release
     runs-on: ubuntu-latest
+    needs: find
+    outputs:
+      prerelease: ${{ steps.check.outputs.prerelease }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Get releases
-        run: curl "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases" -o releases.json
-      - name: Check if $(cat binary_version) is a pre-release
+      - name: Get release info
+        run: curl ${{ needs.find.outputs.url }} -o release.json
+      - id: check
+        name: Check if pre-release
         run: |
-          python <<EOF
-          import json
-          import sys
-          with open('releases.json') as file:
-            releases = json.loads(file.read())
-          with open('binary_version') as file:
-            version = file.read().strip()
-          for release in releases:
-            if release["tag_name"] == version:
-              if release["prerelease"]:
-                print(f"{release['tag_name']} is a Pre-release")
-                sys.exit(1)
-              else:
-                print(f"{release['tag_name']} is a Release")
-                sys.exit(0)
-          else:
-            print(f"{version} release not found")
-          EOF
+          jq .prerelease release.json
+          echo "::set-output name=prerelease::$(jq .prerelease release.json)"
   convert:
-    needs: check
-    if: ${{ !success() || cancelled() }}
-    name: Convert pre-release to release
+    needs: [find, check]
+    if: ${{ needs.check.outputs.prerelease }}
     runs-on: ubuntu-latest
+    name: Convert pre-release to release
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Get releases
-        run: |
-          curl "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases" -o releases.json
-          cat releases.json
-      - name: Find release id
-        run: |
-          python <<EOF
-          import json
-          import sys
-          with open('releases.json') as file:
-            releases = json.loads(file.read())
-          with open('binary_version') as file:
-            version = file.read().strip()
-          for release in releases:
-            if release["tag_name"] == version:
-              print(release["id"])
-              with open('release_id', 'w') as file:
-                file.write(f"{release['id']}")
-          EOF
-      - name: Convert
+      - name: Convert to release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          cat release_id
-          curl -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
+          curl --no-progress-meter \
             -X 'PATCH' \
             -d '{"prerelease":false}' \
-            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/releases/$(cat release_id)" 2>/dev/null
+            -H 'Accept: application/vnd.github.v3+json' \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            ${{ needs.find.outputs.url }}
 
