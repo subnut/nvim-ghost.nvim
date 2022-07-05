@@ -18,16 +18,19 @@ jobs:
             target: macos
             asset_name: nvim-ghost-macos.tar.gz
             asset_path: binary.tar.gz
+            asset_type: application/gzip
             packaging_command: tar -czf binary.tar.gz nvim-ghost-binary
           - os: ubuntu-latest
             target: linux
             asset_name: nvim-ghost-linux.tar.gz
             asset_path: binary.tar.gz
+            asset_type: application/gzip
             packaging_command: tar -czf binary.tar.gz nvim-ghost-binary
           - os: windows-latest
             target: win
             asset_name: nvim-ghost-win64.zip
             asset_path: binary.zip
+            asset_type: application/zip
             packaging_command: 7z a -tzip binary.zip nvim-ghost-binary.exe
     runs-on : ${{ matrix.os }}
     steps:
@@ -65,4 +68,4 @@ jobs:
           upload_url: ${{ steps.get_release.outputs.upload_url }}
           asset_path: ${{ matrix.asset_path }}
           asset_name: ${{ matrix.asset_name }}
-          asset_content_type: application/zip
+          asset_content_type: ${{ matrix.asset_type }}
