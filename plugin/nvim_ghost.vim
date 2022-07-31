@@ -58,7 +58,7 @@ if $NVIM_LISTEN_ADDRESS != v:servername
   let $NVIM_LISTEN_ADDRESS = v:servername
 endif
 
-if !filereadable(g:nvim_ghost_binary_path)
+if !g:nvim_ghost_use_script && !filereadable(g:nvim_ghost_binary_path)
   echohl WarningMsg
   echom '[nvim-ghost] Binary not installed. Please run :call nvim_ghost#installer#install() and restart neovim.'
   echohl None
