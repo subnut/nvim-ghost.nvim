@@ -3,11 +3,13 @@ if !has('nvim')
 endif
 
 " Config
-let g:nvim_ghost_pathsep          = has('win32') ? '\' : '/'
+let g:nvim_ghost_disabled         = get(g:,'nvim_ghost_disabled', 0)
+let g:nvim_ghost_use_script       = get(g:,'nvim_ghost_use_script', 0)
 let g:nvim_ghost_super_quiet      = get(g:,'nvim_ghost_super_quiet', 0)
 let g:nvim_ghost_logging_enabled  = get(g:,'nvim_ghost_logging_enabled', 0)
 
 " Directories (must end with g:nvim_ghost_pathsep)
+let g:nvim_ghost_pathsep            = has('win32') ? '\' : '/'
 let g:nvim_ghost_installation_dir   = expand('<sfile>:h:h')
 let g:nvim_ghost_installation_dir ..= g:nvim_ghost_pathsep
 let g:nvim_ghost_scripts_dir        = g:nvim_ghost_installation_dir . 'scripts'
@@ -17,7 +19,7 @@ let g:nvim_ghost_scripts_dir      ..= g:nvim_ghost_pathsep
 let g:nvim_ghost_script_path = g:nvim_ghost_installation_dir . 'binary.py'
 let g:nvim_ghost_binary_path = g:nvim_ghost_installation_dir . 'nvim-ghost-binary' . (has('win32') ? '.exe' : '')
 
-if get(g:,'nvim_ghost_use_script', 0)
+if g:nvim_ghost_use_script
   if has('win32')
     echohl WarningMsg
     echom 'Sorry, g:nvim_ghost_use_script is currently not available on
@@ -34,7 +36,7 @@ if get(g:,'nvim_ghost_use_script', 0)
   endif
 endif
 
-if get(g:,'nvim_ghost_disabled', 0)
+if g:nvim_ghost_disabled
   let s:filename = expand('<sfile>:p')
   command! GhostTextEnable
         \  let g:nvim_ghost_disabled = 0
