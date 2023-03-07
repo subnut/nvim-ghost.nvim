@@ -17,14 +17,17 @@ if (Test-Path $outFile) {
       rm "$outFile" -ErrorAction Stop
     }
     catch {
-      echo "Please run ':call nvim_ghost#kill_server()' in neovim"
+      echo "Please run ':call nvim_ghost#helper#kill_server()' in neovim"
       Start-Sleep -Seconds 1
     }
   }
 }
 
 echo "Downloading binary..."
-
-Invoke-WebRequest -uri "https://github.com/subnut/nvim-ghost.nvim/releases/download/$version/$assetName" -OutFile ( New-Item -Path "$assetPath" -Force )
+Invoke-WebRequest `
+  -uri "https://github.com/subnut/nvim-ghost.nvim/releases/download/$version/$assetName" `
+  -OutFile ( New-Item -Path "$assetPath" -Force )
 Expand-Archive -LiteralPath "$assetPath" -DestinationPath "$rootDir"
 rm "$assetPath"
+
+# vim: et sw=2 ts=2 sts=2

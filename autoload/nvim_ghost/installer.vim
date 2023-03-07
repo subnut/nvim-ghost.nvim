@@ -1,24 +1,20 @@
+let s:installer_callback = {->0}
+
 function! s:report_result(exitcode) abort
   if a:exitcode == 0
-    echom '[nvim-ghost] Installed sucessfully'
-    call nvim_ghost#start_server()
+    echom '[nvim-ghost] Binary installed sucessfully'
+    call s:installer_callback()
   else
     echohl ErrorMsg
-    echom '[nvim-ghost] Installation failed ' . '(exit code: ' . a:exitcode . ')'
+    echom '[nvim-ghost] Binary installation failed '
+          \ .. '(exit code: ' .. a:exitcode .. ')'
     echohl None
   endif
 endfunction
 
-
-function! nvim_ghost#installer#install() abort
-  if filereadable(g:nvim_ghost_binary_path)
-    let l:downloaded_version = trim(systemlist(shellescape(g:nvim_ghost_binary_path) . ' --version')[0])
-    let l:needed_version = readfile(g:nvim_ghost_installation_dir . 'binary_version')[0]
-    if l:needed_version =~# l:downloaded_version
-      echom '[nvim-ghost] Binary up-to-date'
-      return 0
-    endif
-  endif
+function! nvim_ghost#installer#install(callback) abort
+  echom '[nvim-ghost] Downloading binary'
+  let s:installer_callback = a:callback
 
   if has('win32')
     let l:term_height = 8
@@ -71,7 +67,8 @@ function! nvim_ghost#installer#install() abort
       call s:report_result(l:exitcode)
     endfun
     let l:winid = win_getid()
-    exe (&splitbelow ? 'botright' : 'topleft') . " call term_start(l:command, {'term_rows': " . l:term_height . ", 'close_cb': function('s:callback')})"
+    exe (&splitbelow ? 'botright' : 'topleft') ..
+          \" call term_start(l:command, {'term_rows': " . l:term_height . ", 'close_cb': function('s:callback')})"
     set nobuflisted
     let s:terminal_bufnr = bufnr()
     call win_gotoid(l:winid)

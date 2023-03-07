@@ -4,7 +4,6 @@ import random
 import signal
 import socket
 import sys
-import tempfile
 import threading
 import time
 import urllib.parse
@@ -19,10 +18,8 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.1.4"
+BUILD_VERSION: str = "v0.1.5"
 
-# TEMP_FILEPATH is used to store the port of the currently running server
-TEMP_FILEPATH: str = os.path.join(tempfile.gettempdir(), "nvim-ghost.nvim.port")
 WINDOWS: bool = os.name == "nt"
 LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
 LOGGING_ENABLED: bool = bool(os.environ.get("NVIM_GHOST_LOGGING_ENABLED", False))
@@ -67,22 +64,19 @@ def _port_occupied(port) -> bool:
         return socket_checker.connect_ex((LOCALHOST, port)) == 0
 
 
-def _detect_running_port() -> Optional[int]:
+def _is_running() -> Optional[int]:
     """
     Checks whether the server is already running. If yes, returns the port it
     is running on.
 
     :rtype Optional[int]: Port number of server (if running), else None
     """
-    if os.path.exists(TEMP_FILEPATH):
-        with open(TEMP_FILEPATH) as file:
-            old_port = file.read()
-        try:
-            response = requests.get(f"http://{LOCALHOST}:{old_port}/is_ghost_binary")
-            if response.ok and response.text == "True":
-                return int(old_port)
-        except requests.exceptions.ConnectionError:
-            return
+    try:
+        response = requests.get(f"http://{LOCALHOST}:{_ghost_port}/is_ghost_binary")
+        if response.ok and response.text == "True":
+            return True
+    except requests.exceptions.ConnectionError:
+        return False
 
 
 def _get_running_version(port) -> Optional[str]:
@@ -97,31 +91,16 @@ def _get_running_version(port) -> Optional[str]:
         return response.text
 
 
-def store_port():
-    """
-    Store the port number of Server in TEMP_FILEPATH
-
-    """
-    with open(TEMP_FILEPATH, "w+") as file:
-        file.write(str(servers.http_server.server_port))
-
-
 def exit_if_server_already_running():
-    running_port = _detect_running_port()
-    if running_port is not None:
-        if running_port == GHOST_PORT:
-            if _get_running_version(running_port) == BUILD_VERSION:
-                print("Server already running")
-                if neovim_focused_address is not None:
-                    with get_neovim_handle() as handle:
-                        if not SUPER_QUIET:
-                            handle.command("echom '[nvim-ghost] Server running'")
-                sys.exit()
+    if _is_running():
+        if _get_running_version(_ghost_port) == BUILD_VERSION:
+            print("Server already running")
+            sys.exit()
         # Server is outdated. Stop it.
-        requests.get(f"http://{LOCALHOST}:{running_port}/exit")
+        requests.get(f"http://{LOCALHOST}:{_ghost_port}/exit")
         # Wait till the server has stopped
         while True:
-            if not _port_occupied(running_port):
+            if not _port_occupied(_ghost_port):
                 break
 
 
@@ -497,11 +476,9 @@ if neovim_focused_address is not None:
     with pynvim.attach("socket", path=neovim_focused_address) as nvim_handle:
         if not SUPER_QUIET:
             nvim_handle.command("echom '[nvim-ghost] Servers started'")
-store_port()
 
 
 def stop_servers():
-    os.remove(TEMP_FILEPATH)  # Remove port
     print("Exiting...")
     sys.exit()
 
