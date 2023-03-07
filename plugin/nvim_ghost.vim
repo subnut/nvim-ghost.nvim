@@ -7,6 +7,7 @@ let g:nvim_ghost_disabled         = get(g:,'nvim_ghost_disabled', 0)
 let g:nvim_ghost_use_script       = get(g:,'nvim_ghost_use_script', 0)
 let g:nvim_ghost_super_quiet      = get(g:,'nvim_ghost_super_quiet', 0)
 let g:nvim_ghost_logging_enabled  = get(g:,'nvim_ghost_logging_enabled', 0)
+let g:nvim_ghost_server_port      = get(g:,'nvim_ghost_server_port', get(environ(),'GHOSTTEXT_SERVER_PORT', 4001))
 
 " Directories (must end with g:nvim_ghost_pathsep)
 let g:nvim_ghost_pathsep            = has('win32') ? '\' : '/'
@@ -16,9 +17,16 @@ let g:nvim_ghost_scripts_dir        = g:nvim_ghost_installation_dir . 'scripts'
 let g:nvim_ghost_scripts_dir      ..= g:nvim_ghost_pathsep
 
 " Files
-let g:nvim_ghost_script_path = g:nvim_ghost_installation_dir . 'binary.py'
-let g:nvim_ghost_binary_path = g:nvim_ghost_installation_dir . 'nvim-ghost-binary' . (has('win32') ? '.exe' : '')
+let g:nvim_ghost_script_path = g:nvim_ghost_installation_dir .. 'binary.py'
+let g:nvim_ghost_binary_path = g:nvim_ghost_installation_dir .. 'nvim-ghost-binary' .. (has('win32') ? '.exe' : '')
 
+" Setup environment
+let $NVIM_LISTEN_ADDRESS        = v:servername
+let $NVIM_GHOST_SUPER_QUIET     = g:nvim_ghost_super_quiet
+let $NVIM_GHOST_LOGGING_ENABLED = g:nvim_ghost_logging_enabled
+let $GHOSTTEXT_SERVER_PORT      = g:nvim_ghost_server_port
+
+" Abort if script_mode is enabled but infeasible
 if g:nvim_ghost_use_script
   if has('win32')
     echohl WarningMsg
@@ -36,73 +44,18 @@ if g:nvim_ghost_use_script
   endif
 endif
 
+" If disabled, add :GhostTextEnable command
 if g:nvim_ghost_disabled
   let s:filename = expand('<sfile>:p')
   command! GhostTextEnable
         \  let g:nvim_ghost_disabled = 0
-        \| execute('source '.s:filename)
+        \| call nvim_ghost#init()
         \| doau <nomodeline> nvim_ghost UIEnter
         \| delcommand GhostTextEnable
   finish
 endif
 
-if g:nvim_ghost_logging_enabled
-  let $NVIM_GHOST_LOGGING_ENABLED = 1
-endif
-
-if g:nvim_ghost_super_quiet
-  let $NVIM_GHOST_SUPER_QUIET = 1
-endif
-
-if $NVIM_LISTEN_ADDRESS != v:servername
-  let $NVIM_LISTEN_ADDRESS = v:servername
-endif
-
-if !g:nvim_ghost_use_script && !filereadable(g:nvim_ghost_binary_path)
-  echohl WarningMsg
-  echom '[nvim-ghost] Binary not installed. Please run :call nvim_ghost#installer#install() and restart neovim.'
-  echohl None
-  finish
-endif
-
-augroup nvim_ghost
-  autocmd!
-  autocmd UIEnter     * call nvim_ghost#start_server() | call nvim_ghost#request_focus()
-  autocmd FocusGained * call nvim_ghost#request_focus()
-  autocmd VimLeavePre * call nvim_ghost#session_closed()
-augroup END
-
-" :doau causes error if augroup not defined
-if !exists('#nvim_ghost_user_autocommands')
-  augroup nvim_ghost_user_autocommands
-    autocmd!
-  augroup END
-endif
-
-" Compatibility for terminals that do not support focus
-" Uses CursorMoved to detect focus
-
-if !exists('g:_nvim_ghost_supports_focus')
-  let g:_nvim_ghost_supports_focus = 0
-
-  " vint: next-line -ProhibitAutocmdWithNoGroup
-  autocmd FocusGained,FocusLost * ++once
-        \  let g:_nvim_ghost_supports_focus = 1
-        \| au! _nvim_ghost_does_not_support_focus
-
-  augroup _nvim_ghost_does_not_support_focus
-    au!
-    autocmd CursorMoved,CursorMovedI * call s:focus_gained()
-    autocmd CursorHold,CursorHoldI * let s:focused = v:false
-  augroup END
-
-  let s:focused = v:true
-  fun! s:focus_gained()
-    if !s:focused
-      call nvim_ghost#request_focus()
-      let s:focused = v:true
-    endif
-  endfun
-endif
+" Initialize plugin
+call nvim_ghost#init()
 
 " vim: et ts=2 sts=0 sw=0 nowrap

@@ -2,6 +2,9 @@ __pycache__
 build
 nvim-ghost-binary
 nvim-ghost-binary.exe
+nvim-ghost-macos.tar.gz
+nvim-ghost-linux.tar.gz
+nvim-ghost-win64.zip
 binary.spec
 *.log
 venv
