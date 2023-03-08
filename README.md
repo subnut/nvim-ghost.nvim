@@ -1,50 +1,44 @@
-# nvim-ghost.nvim
+<h1 align="center"><b><u><tt>nvim-ghost.nvim</tt></u></b></h1>
 
 This is a neovim-only plugin for
 [GhostText](https://github.com/GhostText/GhostText)
 
-## Installation
+# Installation
 
-Install it using your favourite plugin manager, and execute
-`:call nvim_ghost#installer#install()`  
-E.g. for [vim-plug](https://github.com/junegunn/vim-plug) -
+Install it using your favourite plugin manager, e.g. for [vim-plug](https://github.com/junegunn/vim-plug) -
 
 ```vim
-Plug 'subnut/nvim-ghost.nvim', {'do': ':call nvim_ghost#installer#install()'}
+Plug 'subnut/nvim-ghost.nvim'
 ```
 
-:warning: **NOTE:** After installing for the first time, you need to restart
-neovim for the plugin to start properly
-
-## Usage
+# Usage
 
 - Open neovim
 - Use GhostText
 
 Really, it's _that_ simple!
 
-## Features
+# Features
 
 - **Zero** dependencies! Does not even need python installed!
 - Supports **neovim running inside WSL** (Windows Subsystem for Linux)
-- Supports Linux, macOS, **Windows** out-of-the-box
-  (_for other OSes, please see below_)
+- Supports Linux, macOS, **Windows** out-of-the-box (_for other OSes, please see [below](#other_oses)_)
 
-## Customization
+# Customization
 
-### Specifying a different port
+## Specifying a different port
 
 The default is `4001`, which corresponds to the default value set in the browser
 extension. If you want to use a different value, simply add the following line
 to your `init.vim` -
 
 ```vim
-let $GHOSTTEXT_SERVER_PORT = 4001
+let g:nvim_ghost_server_port = 4001
 ```
 
 Replace `4001` with the port number you have set in the browser extension
 
-### Custom settings according to website
+## Custom settings according to website
 
 When you trigger GhostText, nvim-ghost triggers an `User` autocommand. You can
 listen for that autocommand and run your own commands (e.g. setting filetype)
@@ -72,7 +66,7 @@ augroup nvim_ghost_user_autocommands
 augroup END
 ```
 
-### Suppressing all messages
+## Suppressing all messages
 
 If you want to suppress _all_ messages from nvim-ghost, then add the following
 to your `init.vim` -
@@ -80,10 +74,17 @@ to your `init.vim` -
 let g:nvim_ghost_super_quiet = 1
 ```
 
+## Start manually
+:warning: **EXPERIMENTAL:** hasn't been tested thoroughly  
+Add this line to your `init.vim` -
+```vim
+let g:nvim_ghost_disabled = 1
+```
+and then, when you need the plugin, run `:GhostTextEnable` to enable the plugin for that specific neovim instance.
 
 <br>
 
-## Other Operating Systems
+<h1 id="other_oses">Other Operating Systems</h1>
 Please understand my situation. This plugin primarily uses a binary with it's
 own packaged version of python3 and comes with the required packages
 pre-installed, but the binary itself needs to be made on a machine running the
