@@ -19,7 +19,9 @@ jobs:
             asset_name: nvim-ghost-macos.tar.gz
             asset_path: binary.tar.gz
             asset_type: application/gzip
-            packaging_command: tar -czf binary.tar.gz nvim-ghost-binary
+            packaging_command: |
+              cp binary_version nvim-ghost-binary.version
+              tar -czf binary.tar.gz nvim-ghost-binary nvim-ghost-binary.version
             upload_command: |
               curl -L \
                 -X POST \
@@ -34,7 +36,9 @@ jobs:
             asset_name: nvim-ghost-linux.tar.gz
             asset_path: binary.tar.gz
             asset_type: application/gzip
-            packaging_command: tar -czf binary.tar.gz nvim-ghost-binary
+            packaging_command: |
+              cp binary_version nvim-ghost-binary.version
+              tar -czf binary.tar.gz nvim-ghost-binary nvim-ghost-binary.version
             upload_command: |
               curl -L \
                 -X POST \
@@ -49,7 +53,9 @@ jobs:
             asset_name: nvim-ghost-win64.zip
             asset_path: binary.zip
             asset_type: application/zip
-            packaging_command: 7z a -tzip binary.zip nvim-ghost-binary.exe
+            packaging_command: |
+              Copy-Item binary_version nvim-ghost-binary.exe.version
+              7z a -tzip binary.zip nvim-ghost-binary.exe nvim-ghost-binary.exe.version
             upload_command: |
               Invoke-WebRequest `
                 -Method POST `
