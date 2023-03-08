@@ -31,9 +31,9 @@ jobs:
           jq <release.json -r .tag_name
           jq <release.json -r .id
           jq <release.json -r .url
-          echo "::set-output name=tag_name::$(jq <release.json -r .tag_name)"
-          echo "::set-output name=release_id::$(jq <release.json -r .id)"
-          echo "::set-output name=url::$(jq <release.json -r .url)"
+          echo >> $GITHUB_OUTPUT "tag_name=$(jq <release.json -r .tag_name)"
+          echo >> $GITHUB_OUTPUT "release_id=$(jq <release.json -r .id)"
+          echo >> $GITHUB_OUTPUT "url=$(jq <release.json -r .url)"
   check:
     name: Check if pre-release
     runs-on: ubuntu-latest
@@ -47,7 +47,7 @@ jobs:
         name: Check if pre-release
         run: |
           jq .prerelease release.json
-          echo "::set-output name=prerelease::$(jq .prerelease release.json)"
+          echo >> $GITHUB_OUTPUT "prerelease=$(jq .prerelease release.json)"
   convert:
     needs: [find, check]
     if: ${{ needs.check.outputs.prerelease }}
