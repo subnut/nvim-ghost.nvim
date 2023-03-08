@@ -3,8 +3,10 @@ if !has('nvim')
 endif
 
 function! nvim_ghost#init()
+  " We need trim() because Windows may introduce trailing CR or LF characters
   if !g:nvim_ghost_use_script && (!filereadable(g:nvim_ghost_binary_path) ||
-        \readfile(g:nvim_ghost_installation_dir .. 'binary_version') != systemlist([g:nvim_ghost_binary_path, "--version"])
+        \ trim(readfile(g:nvim_ghost_installation_dir .. 'binary_version')[0])
+        \ != trim(systemlist([g:nvim_ghost_binary_path, "--version"])[0])
         \)
     call nvim_ghost#installer#install(function("nvim_ghost#enable"))
   else
