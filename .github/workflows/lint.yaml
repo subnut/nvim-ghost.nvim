@@ -1,25 +1,27 @@
 name: Lint
 on: push
 jobs:
-  Vint:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v2
-      - name: Setup dependencies
-        run: pip install vim-vint
-      - name: Run Vimscript Linter
-        run: vint .
   Flake8:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
       - name: Setup dependencies
         run: pip install flake8
       - name: Run Python Linter
         run: flake8 binary.py
+  ## Vint is disabled because it cannot parse
+  ## the expression "a" .. "b" (see :help expr-..)
+  #  Vint:
+  #    runs-on: ubuntu-latest
+  #    steps:
+  #      - name: Checkout
+  #        uses: actions/checkout@v3
+  #      - name: Set up Python
+  #        uses: actions/setup-python@v3
+  #      - name: Setup dependencies
+  #        run: pip install vim-vint
+  #      - name: Run Vimscript Linter
+  #        run: vint .
