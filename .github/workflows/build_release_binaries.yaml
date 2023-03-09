@@ -8,8 +8,61 @@ on:
       - 'v*'
 
 jobs:
+  find_latest_pyinstaller:
+    name: Get latest pyinstaller version
+    runs-on: ubuntu-latest
+    outputs:
+      tagname: ${{ steps.get_tagname.outputs.tagname }}
+    steps:
+      - name: Get latest tag name
+        id: get_tagname
+        run: |
+          curl -L https://api.github.com/repos/pyinstaller/pyinstaller/releases/latest -o releases.json
+          printf %s tagname=            >> "$GITHUB_OUTPUT"
+          jq -r .tag_name releases.json >> "$GITHUB_OUTPUT"
+          jq -r .tag_name releases.json
   build_and_upload_assets:
-    name: Build and upload
+    name: Build and upload binary assets
+    needs: find_latest_pyinstaller
+    runs-on : ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up Python
+        uses: actions/setup-python@v3
+      - name: Setup dependencies
+        run: |
+          pip install wheel
+          pip install -r requirements.txt
+      - name: Fetch pyinstaller
+        run: ${{ matrix.fetch_pyinstaller_command }}
+        env:
+          PYINSTALLER_TAG: ${{ needs.find_latest_pyinstaller.outputs.tagname }}
+      - name: Setup pyinstaller
+        run: |
+          cd pyinstaller
+          cd bootloader
+          python waf all
+          cd ..
+          pip install .
+          cd ..
+      - name: Build binary
+        run: pyinstaller --onefile --distpath . binary.py --name nvim-ghost-binary
+      - name: Build package
+        run: ${{ matrix.packaging_command }}
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.3.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Upload release asset
+        run: ${{ matrix.upload_command }}
+        env:
+          ASSET_PATH: ${{ matrix.asset_path }}
+          ASSET_NAME: ${{ matrix.asset_name }}
+          ASSET_TYPE: ${{ matrix.asset_type }}
+          RELEASE_ID: ${{ steps.get_release.outputs.id }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     strategy:
       matrix:
         os: [macos-latest, ubuntu-latest, windows-latest]
@@ -31,6 +84,10 @@ jobs:
                 -H "X-GitHub-Api-Version: 2022-11-28" \
                 "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=$ASSET_NAME" \
                 --data-binary "@$ASSET_PATH"
+            fetch_pyinstaller_command: |
+              curl -Lo pyinstaller.tar.gz "https://github.com/pyinstaller/pyinstaller/archive/refs/tags/$PYINSTALLER_TAG.tar.gz"
+              tar xvf pyinstaller.tar.gz
+              mv "pyinstaller-${PYINSTALLER_TAG#v}" pyinstaller
           - os: ubuntu-latest
             target: linux
             asset_name: nvim-ghost-linux.tar.gz
@@ -48,6 +105,10 @@ jobs:
                 -H "X-GitHub-Api-Version: 2022-11-28" \
                 "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=$ASSET_NAME" \
                 --data-binary "@$ASSET_PATH"
+            fetch_pyinstaller_command: |
+              curl -Lo pyinstaller.tar.gz "https://github.com/pyinstaller/pyinstaller/archive/refs/tags/$PYINSTALLER_TAG.tar.gz"
+              tar xvf pyinstaller.tar.gz
+              mv "pyinstaller-${PYINSTALLER_TAG#v}" pyinstaller
           - os: windows-latest
             target: win
             asset_name: nvim-ghost-win64.zip
@@ -67,39 +128,9 @@ jobs:
                 } `
                 -Uri "https://uploads.github.com/repos/$Env:GITHUB_REPOSITORY/releases/$Env:RELEASE_ID/assets?name=$Env:ASSET_NAME" `
                 -InFile "$Env:ASSET_PATH"
-    runs-on : ${{ matrix.os }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v3
-      - name: Setup dependencies
-        run: |
-          pip install wheel
-          pip install -r requirements.txt
-      - name: Setup pyinstaller
-        run: |
-          git clone https://github.com/pyinstaller/pyinstaller --depth 1
-          cd pyinstaller
-          cd bootloader
-          python waf all
-          cd ..
-          pip install .
-          cd ..
-      - name: Build binary
-        run: pyinstaller --onefile --distpath . binary.py --name nvim-ghost-binary
-      - name: Build package
-        run: ${{ matrix.packaging_command }}
-      - name: Get release
-        id: get_release
-        uses: bruceadams/get-release@v1.3.2
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-      - name: Upload release asset
-        env:
-          ASSET_PATH: ${{ matrix.asset_path }}
-          ASSET_NAME: ${{ matrix.asset_name }}
-          ASSET_TYPE: ${{ matrix.asset_type }}
-          RELEASE_ID: ${{ steps.get_release.outputs.id }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ${{ matrix.upload_command }}
+            fetch_pyinstaller_command: |
+              Invoke-WebRequest -OutFile pyinstaller.zip -Uri "https://github.com/pyinstaller/pyinstaller/archive/refs/tags/$Env:PYINSTALLER_TAG.zip"
+              Expand-Archive pyinstaller.zip -DestinationPath .
+              Move-Item "pyinstaller-$($Env:PYINSTALLER_TAG.TrimStart('v'))" pyinstaller
+
+# vim: nowrap et ts=2 sts=2 sw=2
