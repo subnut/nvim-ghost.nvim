@@ -4,7 +4,7 @@ import random
 import signal
 import socket
 import sys
-import threading
+import multiprocessing
 import time
 import urllib.parse
 from http.server import BaseHTTPRequestHandler
@@ -18,7 +18,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.2.4"
+BUILD_VERSION: str = "v0.2.5"
 
 WINDOWS: bool = os.name == "nt"
 LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
@@ -139,6 +139,12 @@ class ArgParser:
         LOGGING_ENABLED = True
 
 
+class GhostHTTPServer(HTTPServer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.running = False
+
+
 class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed_url = urllib.parse.urlparse(self.path)
@@ -199,10 +205,9 @@ class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
         We have been told to exit
 
         """
-        self._respond("Exiting...")
         print(time.strftime("[%H:%M:%S]:"), "Received /exit")
-        global stop_servers
-        stop_servers()
+        self._respond("Exiting...")
+        self.server.running = False
 
     def _sanity_check_responder(self):
         """
@@ -352,7 +357,7 @@ class GhostWebSocket(WebSocket):
             WEBSOCKET_PER_NEOVIM_ADDRESS.__delitem__(self.neovim_address)
 
     def _start_neovim_listener(self):
-        threading.Thread(target=self._neovim_listener, daemon=True).start()
+        multiprocessing.Process(target=self._neovim_listener, daemon=True).start()
 
     def _neovim_listener(self):
         self.loop_neovim_handle = get_neovim_handle()
@@ -428,24 +433,24 @@ class Server:
     def __init__(self):
         self.http_server = self._http_server()
         self.websocket_server = self._websocket_server()
-        # Do not daemonize one of the threads. It will keep the binary running
-        # after the main thread has finished executing everything.
-        self.http_server_thread = threading.Thread(
-            target=self._http_server_serve_forever
+        self.http_server_process = multiprocessing.Process(
+            target=self._http_server_serve_forever,
+            daemon=True,
         )
-        self.websocket_server_thread = threading.Thread(
+        self.websocket_server_process = multiprocessing.Process(
             target=self.websocket_server.serve_forever,
             daemon=True,
         )
 
     def _http_server(self):
         if not _port_occupied(GHOST_PORT):
-            return HTTPServer((LOCALHOST, GHOST_PORT), GhostHTTPRequestHandler)
+            return GhostHTTPServer((LOCALHOST, GHOST_PORT), GhostHTTPRequestHandler)
         else:
             sys.exit("Port Occupied")
 
     def _http_server_serve_forever(self):
-        while True:
+        self.http_server.running = True
+        while self.http_server.running:
             self.http_server.handle_request()
 
     def _websocket_server(self):
@@ -463,14 +468,14 @@ argparser.parse_args()
 # Start servers
 exit_if_server_already_running()
 servers = Server()
-servers.http_server_thread.start()
-servers.websocket_server_thread.start()
 if LOGGING_ENABLED:
     sys.stdout = open("stdout.log", "w", buffering=1)
     sys.stderr = open("stderr.log", "w", buffering=1)
     print(time.strftime("%A, %d %B %Y, %H:%M:%S"))
     print(f"$NVIM_LISTEN_ADDRESS: {neovim_focused_address}")
     print(f"binary {BUILD_VERSION}")
+servers.http_server_process.start()
+servers.websocket_server_process.start()
 print("Servers started")
 if neovim_focused_address is not None:
     with pynvim.attach("socket", path=neovim_focused_address) as nvim_handle:
@@ -478,19 +483,18 @@ if neovim_focused_address is not None:
             nvim_handle.command("echom '[nvim-ghost] Servers started'")
 
 
-def stop_servers():
-    print("Exiting...")
-    sys.exit()
-
-
 def _signal_handler(_signal, _):
     _signal_name = signal.Signals(_signal).name
     print(time.strftime("[%H:%M:%S]:"), f"Caught: {_signal_name}")
     if _signal in (signal.SIGINT, signal.SIGTERM):
-        stop_servers()
+        print("Exiting...")
+        sys.exit()
 
 
 signal.signal(signal.SIGINT, _signal_handler)
 signal.signal(signal.SIGTERM, _signal_handler)
+
+# wait for HTTPServer thread to exit
+servers.http_server_process.join()
 
 # vim: et ts=4 sw=4 sts=4
