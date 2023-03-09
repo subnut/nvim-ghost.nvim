@@ -31,6 +31,7 @@ function! nvim_ghost#helper#is_running() abort  " {{{1
   if v:errmsg !=# '' || l:connection == 0
     return v:false
   endif
+  call chanclose(l:connection)
   return v:true
 endfunction
 
