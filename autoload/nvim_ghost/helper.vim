@@ -23,7 +23,7 @@ function! nvim_ghost#helper#is_running() abort  " {{{1
   " See s:send_GET_request for explanation on how this works
   let v:errmsg = ''
   let l:url = s:localhost .. ':' .. $GHOSTTEXT_SERVER_PORT
-  silent! let l:connection = sockconnect('tcp', l:url, l:opts)
+  silent! let l:connection = sockconnect('tcp', l:url)
   if v:errmsg !=# '' || l:connection == 0
     return v:false
   endif

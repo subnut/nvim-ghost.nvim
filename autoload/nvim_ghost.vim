@@ -13,17 +13,20 @@ function! nvim_ghost#init()
   endif
 endfunction
 
-function! s:start_server_and_request_focus()
+function! s:start_server_or_request_focus()
+  " If we start the server, we are already focused, so we don't need to
+  " request_focus separately
   if ! nvim_ghost#helper#is_running()
     call nvim_ghost#helper#start_server()
+  else
+    call nvim_ghost#helper#request_focus()
   endif
-  call nvim_ghost#helper#request_focus()
 endfunction
 
 function! nvim_ghost#enable()
   augroup nvim_ghost
     autocmd!
-    autocmd UIEnter     * call s:start_server_and_request_focus()
+    autocmd UIEnter     * call s:start_server_or_request_focus()
     autocmd FocusGained * call nvim_ghost#helper#request_focus()
     autocmd VimLeavePre * call nvim_ghost#helper#session_closed()
   augroup END
