@@ -27,10 +27,9 @@ OUTFILE="$ROOT_DIR/nvim-ghost-binary"
 PKG_VERSION=$(cat "$ROOT_DIR/binary_version")
 RELEASE_URL="https://github.com/subnut/nvim-ghost.nvim/releases/download/$PKG_VERSION"
 
-# delete any previous partial downloads
-if [ -e $OUTFILE ]; then
-  rm -f $OUTFILE
-fi
+# delete currently installed binary
+rm -f "$OUTFILE"
+rm -f "$OUTFILE.version"
 
 # set download name
 if   [ "$OS" = Darwin ]; then TARGET=nvim-ghost-macos

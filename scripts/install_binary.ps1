@@ -6,10 +6,12 @@ $assetName = "nvim-ghost-win64.zip"
 $assetPath = "$rootDir\$assetName"
 $outFile = "$rootDir\nvim-ghost-binary.exe"
 
+# Delete previous partial downloads
 if (Test-Path $assetName) {
   rm "$assetName"
 }
 
+# Delete current binary
 if (Test-Path $outFile) {
   echo "Binary still running"
   while (Test-Path $outFile) {
@@ -22,6 +24,7 @@ if (Test-Path $outFile) {
     }
   }
 }
+rm "$outFile.version"
 
 echo "Downloading binary..."
 Invoke-WebRequest `
