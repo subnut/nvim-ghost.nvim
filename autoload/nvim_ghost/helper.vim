@@ -20,19 +20,18 @@ let s:joblog_arguments_nokill = extend(copy(s:joblog_arguments), {
       \})
 
 function! nvim_ghost#helper#is_running() abort  " {{{1
-  " See s:send_GET_request for explanation on how this works
   let v:errmsg = ''
   let l:url = s:localhost .. ':' .. $GHOSTTEXT_SERVER_PORT
-  let l:opts = {
-        \'on_data': {id,data,name->chanclose(id)},
-        \'data_buffered': v:true,
-        \}
+  let l:opts = #{ data_buffered: v:true }
+  let l:result = v:true
   silent! let l:connection = sockconnect('tcp', l:url, l:opts)
   if v:errmsg !=# '' || l:connection == 0
-    return v:false
+    let l:result = v:false
   endif
-  call chanclose(l:connection)
-  return v:true
+  if l:connection != 0
+    call chanclose(l:connection)
+  endif
+  return l:result
 endfunction
 
 function! s:send_GET_request(url) abort "{{{1
