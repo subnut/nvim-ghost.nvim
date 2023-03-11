@@ -418,7 +418,7 @@ class GhostWebSocket(WebSocket):
         )
 
     def __init__(self, *args, **kwargs):
-        self.nvim_addr_vs_websocket = {}
+        self.nvim_addr_vs_websocket: Dict[str, List[GhostWebSocket]] = {}
         super().__init__(*args, **kwargs)
 
 
