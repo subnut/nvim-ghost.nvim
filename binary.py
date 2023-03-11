@@ -19,7 +19,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.2.6"
+BUILD_VERSION: str = "v0.2.7"
 
 WINDOWS: bool = os.name == "nt"
 LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
@@ -427,7 +427,7 @@ class GhostWebSocketServer(WebSocketServer):
     # it's port number.   Yes, I have seen the source code. It doesn't.
     def __init__(self, host, port, websocketclass, **kwargs):
         self.port = port
-        super().__init__(host, port, websocketclass, select_interval=0, **kwargs)
+        super().__init__(host, port, websocketclass, **kwargs)
 
 
 class Server:
