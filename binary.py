@@ -19,7 +19,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.2.7"
+BUILD_VERSION: str = "v0.3.0"
 
 WINDOWS: bool = os.name == "nt"
 LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
@@ -385,6 +385,15 @@ class GhostWebSocket(WebSocket):
             # Get the buffer contents
             handle = self.loop_neovim_handle
             buffer_contents = handle.api.buf_get_lines(self.buffer_handle, 0, -1, False)
+            _, lnum, col, _, _ = handle.call("getcurpos")
+            lnum -= 1  # indexing mismatch (nvim starts from 1, python starts from 0)
+            col -= 1  # indexing mismatch (nvim starts from 1  python starts from 0)
+
+            # Calculate curpos
+            curpos = 0
+            for line in buffer_contents[:lnum]:
+                curpos += len(line) + 1
+            curpos += col
 
             # Turn buffer_contents (a List) to a string
             text = "\n".join(buffer_contents)
@@ -399,13 +408,10 @@ class GhostWebSocket(WebSocket):
                 self.last_set_text = None
 
             # Send the text
-            self._send_text(text)
-
-    def _send_text(self, text: str):
-        # Construct and send the message
-        message = json.dumps({"text": text, "selections": []})
-        self.send_message(message)
-        log(f"{self.address[1]} sent", message)
+            message = {"text": text, "selections": [{"start": curpos, "end": curpos}]}
+            message = json.dumps(message)
+            self.send_message(message)
+            log(f"{self.address[1]} sent", message)
 
     def _trigger_autocmds(self, url: str):
         self.neovim_handle.command(f"doau nvim_ghost_user_autocommands User {url}")
