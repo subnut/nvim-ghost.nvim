@@ -105,6 +105,7 @@ endfunction
 
 function! nvim_ghost#helper#session_closed() abort " {{{1
   call s:send_GET_request('/session-closed?session=' . v:servername)
+  call rpcnotify(0, "nvim_ghost_exit_event")
 endfunction
 function! nvim_ghost#helper#joboutput_logger(data,type) abort  " {{{1
   if !g:nvim_ghost_logging_enabled || g:nvim_ghost_super_quiet

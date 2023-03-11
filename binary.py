@@ -1,10 +1,11 @@
 import json
+import multiprocessing
 import os
 import random
 import signal
 import socket
 import sys
-import multiprocessing
+import threading
 import time
 import urllib.parse
 from http.server import BaseHTTPRequestHandler
@@ -18,27 +19,35 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.2.5"
+BUILD_VERSION: str = "v0.2.6"
 
 WINDOWS: bool = os.name == "nt"
 LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
-LOGGING_ENABLED: bool = bool(os.environ.get("NVIM_GHOST_LOGGING_ENABLED", False))
 SUPER_QUIET: bool = bool(os.environ.get("NVIM_GHOST_SUPER_QUIET", False))
+SERVER_PORT: str = os.environ.get("GHOSTTEXT_SERVER_PORT", "4001")
+LOGGING_ENABLED: bool = False
+if os.environ.get("NVIM_GHOST_LOGGING_ENABLED") is not None:
+    if os.environ.get("NVIM_GHOST_LOGGING_ENABLED").isdigit():
+        LOGGING_ENABLED = bool(int(os.environ.get("NVIM_GHOST_LOGGING_ENABLED")))
+    else:
+        sys.exit("Invalid value of $NVIM_GHOST_LOGGING_ENABLED")
 
-neovim_focused_address: Optional[str] = os.environ.get("NVIM_LISTEN_ADDRESS", None)
-_ghost_port: str = os.environ.get("GHOSTTEXT_SERVER_PORT", "4001")
+
+process_manager = multiprocessing.Manager()
+global_ns = process_manager.Namespace()
+global_ns.focused_nvim_addr = os.environ.get("NVIM_LISTEN_ADDRESS", None)
 
 
-if not _ghost_port.isdigit():
-    if neovim_focused_address is not None:
-        with pynvim.attach("socket", path=neovim_focused_address) as nvim_handle:
+if not SERVER_PORT.isdigit():
+    if global_ns.focused_nvim_addr is not None:
+        with pynvim.attach("socket", path=global_ns.focused_nvim_addr) as nvim_handle:
             if not SUPER_QUIET:
                 nvim_handle.command(
                     "echom '[nvim-ghost] Invalid port. "
                     "Please set $GHOSTTEXT_SERVER_PORT to a valid port.'"
                 )
     sys.exit("Port must be a number")
-GHOST_PORT: int = int(_ghost_port)
+GHOST_PORT: int = int(SERVER_PORT)
 
 
 # chdir to folder containing binary
@@ -49,8 +58,8 @@ os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 # See: https://stackoverflow.com/a/53511380
 
 
-def get_neovim_handle() -> pynvim.Nvim:
-    return pynvim.attach("socket", path=neovim_focused_address)
+def log(*args, **kwargs):
+    print(time.strftime("[%H:%M:%S]:"), *args, **kwargs)
 
 
 def _port_occupied(port) -> bool:
@@ -72,7 +81,7 @@ def _is_running() -> Optional[int]:
     :rtype Optional[int]: Port number of server (if running), else None
     """
     try:
-        response = requests.get(f"http://{LOCALHOST}:{_ghost_port}/is_ghost_binary")
+        response = requests.get(f"http://{LOCALHOST}:{SERVER_PORT}/is_ghost_binary")
         if response.ok and response.text == "True":
             return True
     except requests.exceptions.ConnectionError:
@@ -93,14 +102,14 @@ def _get_running_version(port) -> Optional[str]:
 
 def exit_if_server_already_running():
     if _is_running():
-        if _get_running_version(_ghost_port) == BUILD_VERSION:
+        if _get_running_version(SERVER_PORT) == BUILD_VERSION:
             print("Server already running")
             sys.exit()
         # Server is outdated. Stop it.
-        requests.get(f"http://{LOCALHOST}:{_ghost_port}/exit")
+        requests.get(f"http://{LOCALHOST}:{SERVER_PORT}/exit")
         # Wait till the server has stopped
         while True:
-            if not _port_occupied(_ghost_port):
+            if not _port_occupied(SERVER_PORT):
                 break
 
 
@@ -175,7 +184,7 @@ class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
 
         """
 
-        if neovim_focused_address is None:
+        if global_ns.focused_nvim_addr is None:
             # There's no neovim instance to handle our request
             return
         # In f-strings, to insert literal {, we need to escape it using another {
@@ -205,7 +214,7 @@ class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
         We have been told to exit
 
         """
-        print(time.strftime("[%H:%M:%S]:"), "Received /exit")
+        log("Received /exit")
         self._respond("Exiting...")
         self.server.running = False
 
@@ -224,10 +233,9 @@ class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
         """
         _, address = urllib.parse.parse_qsl(query_string)[0]
         self._respond(address)
-        global neovim_focused_address
-        if neovim_focused_address != address:
-            neovim_focused_address = address
-            print(time.strftime("[%H:%M:%S]:"), f"Focus {address}")
+        if global_ns.focused_nvim_addr != address:
+            global_ns.focused_nvim_addr = address
+            log(f"Focus {address}")
 
     def _session_closed_responder(self, query_string):
         """
@@ -237,15 +245,9 @@ class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
         """
         _, address = urllib.parse.parse_qsl(query_string)[0]
         self._respond(address)
-        print(time.strftime("[%H:%M:%S]:"), f"{address} session closed")
-        global WEBSOCKET_PER_NEOVIM_ADDRESS
-        if WEBSOCKET_PER_NEOVIM_ADDRESS.__contains__(address):
-            for websocket in WEBSOCKET_PER_NEOVIM_ADDRESS[address]:
-                websocket.close()
-            WEBSOCKET_PER_NEOVIM_ADDRESS.__delitem__(address)
-        global neovim_focused_address
-        if address == neovim_focused_address:
-            neovim_focused_address = None
+        log(f"{address} session closed")
+        if address == global_ns.focused_nvim_addr:
+            global_ns.focused_nvim_addr = None
 
     def _respond(self, text):
         """
@@ -262,8 +264,7 @@ class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
 class GhostWebSocket(WebSocket):
     # New message received
     def handle(self):
-        # Log
-        print(time.strftime("[%H:%M:%S]:"), f"{self.address[1]} got", self.data)
+        log(f"{self.address[1]} got", self.data)
 
         # Extract the data
         data = json.loads(self.data)
@@ -309,39 +310,34 @@ class GhostWebSocket(WebSocket):
     # New connection
     def connected(self):
         # Create and setup the buffer
-        self.neovim_address = neovim_focused_address
-        self.neovim_handle = get_neovim_handle()
+        self.neovim_address = global_ns.focused_nvim_addr
+        self.neovim_handle = pynvim.attach("socket", path=self.neovim_address)
         self.buffer_handle = self.neovim_handle.api.create_buf(False, True)
         self.neovim_handle.api.buf_set_option(self.buffer_handle, "bufhidden", "wipe")
         self.neovim_handle.command(f"tabe | {self.buffer_handle.number}buffer")
         self.handle_neovim_notifications = True
         self._start_neovim_listener()
 
-        # Log
-        print(
-            time.strftime("[%H:%M:%S]:"),
-            "Connected",
+        log(
+            "Websocket",
             ":".join([str(_) for _ in self.address]),
-            "to",
+            "connected to",
             self.neovim_address,
         )
 
         # Add it to the records
-        global WEBSOCKET_PER_NEOVIM_ADDRESS
-        if not WEBSOCKET_PER_NEOVIM_ADDRESS.__contains__(self.neovim_address):
-            WEBSOCKET_PER_NEOVIM_ADDRESS[self.neovim_address] = []
-        WEBSOCKET_PER_NEOVIM_ADDRESS[self.neovim_address].append(self)
+        if self.neovim_address not in self.nvim_addr_vs_websocket.keys():
+            self.nvim_addr_vs_websocket.setdefault(self.neovim_address, self)
 
         # Since it's a new connection, we haven't handled the first message yet
         self.handled_first_message = False
 
     # Connection closed
     def handle_close(self):
-        # Log
-        print(
-            time.strftime("[%H:%M:%S]:"),
+        log(
+            "Websocket",
             ":".join([str(_) for _ in self.address]),
-            "websocket closed",
+            "closed by browser",
         )
 
         # Delete buffer and stop event loop
@@ -351,22 +347,24 @@ class GhostWebSocket(WebSocket):
         self.loop_neovim_handle.close()
 
         # Check and delete the associated records
-        global WEBSOCKET_PER_NEOVIM_ADDRESS
-        WEBSOCKET_PER_NEOVIM_ADDRESS[self.neovim_address].remove(self)
-        if len(WEBSOCKET_PER_NEOVIM_ADDRESS[self.neovim_address]) == 0:
-            WEBSOCKET_PER_NEOVIM_ADDRESS.__delitem__(self.neovim_address)
+        self.nvim_addr_vs_websocket[self.neovim_address].remove(self)
+        if len(self.nvim_addr_vs_websocket[self.neovim_address]) == 0:
+            self.nvim_addr_vs_websocket.pop(self.neovim_address)
 
     def _start_neovim_listener(self):
-        multiprocessing.Process(target=self._neovim_listener, daemon=True).start()
+        # We need to use threading because a daemonized process cannot have a child
+        threading.Thread(target=self._neovim_listener, daemon=True).start()
 
     def _neovim_listener(self):
-        self.loop_neovim_handle = get_neovim_handle()
+        self.loop_neovim_handle = pynvim.attach("socket", path=self.neovim_address)
         self.loop_neovim_handle.subscribe("nvim_buf_lines_event")
         self.loop_neovim_handle.subscribe("nvim_buf_detach_event")
+        self.loop_neovim_handle.subscribe("nvim_ghost_exit_event")  # neovim is exiting
         self.loop_neovim_handle.api.buf_attach(self.buffer_handle, False, {})
         self.loop_neovim_handle.run_loop(None, self._neovim_handler)
 
     def _neovim_handler(self, *args):
+        log(f"nvim_event  handle={self.handle_neovim_notifications}  {args}")
         if not self.handle_neovim_notifications:
             # Resume handling notifications, because this notification has been
             # triggered by the buffer changes we have done above.
@@ -378,9 +376,9 @@ class GhostWebSocket(WebSocket):
         # Fetch the event name
         event = args[0]
 
-        if event == "nvim_buf_detach_event":
+        if event in ("nvim_buf_detach_event", "nvim_ghost_exit_event"):
             # Buffer has been closed by user. Close the connection.
-            self.close()
+            self._do_close()
 
         if event == "nvim_buf_lines_event":
             # Buffer text has been changed by user.
@@ -404,21 +402,24 @@ class GhostWebSocket(WebSocket):
             self._send_text(text)
 
     def _send_text(self, text: str):
-        # NOTE: Just satisfying the protocol for now.
-        # I still don't know how to extract 'selections' from neovim
-        # Heck, I don't even know what this thing is supposed to do!
-        selections: List[Dict[str:int]] = []
-        selections.append({"start": 0, "end": 0})
-
         # Construct and send the message
-        message = json.dumps({"text": text, "selections": selections})
+        message = json.dumps({"text": text, "selections": []})
         self.send_message(message)
-
-        # Log
-        print(time.strftime("[%H:%M:%S]:"), f"{self.address[1]} sent", message)
+        log(f"{self.address[1]} sent", message)
 
     def _trigger_autocmds(self, url: str):
         self.neovim_handle.command(f"doau nvim_ghost_user_autocommands User {url}")
+
+    def _do_close(self):
+        log(
+            "Websocket",
+            ":".join([str(_) for _ in self.address]),
+            "closed by us",
+        )
+
+    def __init__(self, *args, **kwargs):
+        self.nvim_addr_vs_websocket = {}
+        super().__init__(*args, **kwargs)
 
 
 class GhostWebSocketServer(WebSocketServer):
@@ -426,7 +427,7 @@ class GhostWebSocketServer(WebSocketServer):
     # it's port number.   Yes, I have seen the source code. It doesn't.
     def __init__(self, host, port, websocketclass, **kwargs):
         self.port = port
-        super().__init__(host, port, websocketclass, **kwargs)
+        super().__init__(host, port, websocketclass, select_interval=0, **kwargs)
 
 
 class Server:
@@ -460,8 +461,6 @@ class Server:
                 return GhostWebSocketServer(LOCALHOST, random_port, GhostWebSocket)
 
 
-WEBSOCKET_PER_NEOVIM_ADDRESS: Dict[str, List[GhostWebSocket]] = {}
-
 argparser = ArgParser()
 argparser.parse_args()
 
@@ -472,20 +471,20 @@ if LOGGING_ENABLED:
     sys.stdout = open("stdout.log", "w", buffering=1)
     sys.stderr = open("stderr.log", "w", buffering=1)
     print(time.strftime("%A, %d %B %Y, %H:%M:%S"))
-    print(f"$NVIM_LISTEN_ADDRESS: {neovim_focused_address}")
+    print(f"$NVIM_LISTEN_ADDRESS: {global_ns.focused_nvim_addr}")
     print(f"binary {BUILD_VERSION}")
 servers.http_server_process.start()
 servers.websocket_server_process.start()
 print("Servers started")
-if neovim_focused_address is not None:
-    with pynvim.attach("socket", path=neovim_focused_address) as nvim_handle:
+if global_ns.focused_nvim_addr is not None:
+    with pynvim.attach("socket", path=global_ns.focused_nvim_addr) as nvim_handle:
         if not SUPER_QUIET:
             nvim_handle.command("echom '[nvim-ghost] Servers started'")
 
 
 def _signal_handler(_signal, _):
     _signal_name = signal.Signals(_signal).name
-    print(time.strftime("[%H:%M:%S]:"), f"Caught: {_signal_name}")
+    log(f"Caught: {_signal_name}")
     if _signal in (signal.SIGINT, signal.SIGTERM):
         print("Exiting...")
         sys.exit()
