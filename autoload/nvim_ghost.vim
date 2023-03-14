@@ -9,7 +9,7 @@ function! nvim_ghost#init()
         \)
     call nvim_ghost#installer#install(function("nvim_ghost#enable"))
   else
-    call nvim_ghost#enable()
+    call nvim_ghost#enable(1)
   endif
 endfunction
 
@@ -23,10 +23,16 @@ function! s:start_server_or_request_focus()
   endif
 endfunction
 
-function! nvim_ghost#enable()
+function! nvim_ghost#enable(defer = 0)
+  if !a:defer
+    call s:start_server_or_request_focus()
+  endif
+
   augroup nvim_ghost
     autocmd!
-    autocmd UIEnter     * call s:start_server_or_request_focus()
+    if a:defer
+      autocmd UIEnter   * call s:start_server_or_request_focus()
+    endif
     autocmd FocusGained * call nvim_ghost#helper#request_focus()
     autocmd VimLeavePre * call nvim_ghost#helper#session_closed()
   augroup END
