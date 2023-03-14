@@ -19,7 +19,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.3.0"
+BUILD_VERSION: str = "v0.3.1.fix-mac"
 
 WINDOWS: bool = os.name == "nt"
 LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
@@ -31,12 +31,6 @@ if os.environ.get("NVIM_GHOST_LOGGING_ENABLED") is not None:
         LOGGING_ENABLED = bool(int(os.environ.get("NVIM_GHOST_LOGGING_ENABLED")))
     else:
         sys.exit("Invalid value of $NVIM_GHOST_LOGGING_ENABLED")
-
-
-process_manager = multiprocessing.Manager()
-global_ns = process_manager.Namespace()
-global_ns.focused_nvim_addr = os.environ.get("NVIM_LISTEN_ADDRESS", None)
-
 
 if not SERVER_PORT.isdigit():
     if global_ns.focused_nvim_addr is not None:
@@ -470,22 +464,29 @@ class Server:
 argparser = ArgParser()
 argparser.parse_args()
 
-# Start servers
-exit_if_server_already_running()
-servers = Server()
 if LOGGING_ENABLED:
     sys.stdout = open("stdout.log", "w", buffering=1)
     sys.stderr = open("stderr.log", "w", buffering=1)
     print(time.strftime("%A, %d %B %Y, %H:%M:%S"))
     print(f"$NVIM_LISTEN_ADDRESS: {global_ns.focused_nvim_addr}")
     print(f"binary {BUILD_VERSION}")
-servers.http_server_process.start()
-servers.websocket_server_process.start()
-print("Servers started")
-if global_ns.focused_nvim_addr is not None:
-    with pynvim.attach("socket", path=global_ns.focused_nvim_addr) as nvim_handle:
-        if not SUPER_QUIET:
-            nvim_handle.command("echom '[nvim-ghost] Servers started'")
+
+if __name__ == "__main__":
+    multiprocessing.freeze_support()
+    multiprocessing.set_start_method("fork")
+    process_manager = multiprocessing.Manager()
+    global_ns = process_manager.Namespace()
+    global_ns.focused_nvim_addr = os.environ.get("NVIM_LISTEN_ADDRESS", None)
+
+    exit_if_server_already_running()
+    servers = Server()
+    servers.http_server_process.start()
+    servers.websocket_server_process.start()
+    print("Servers started")
+    if global_ns.focused_nvim_addr is not None:
+        with pynvim.attach("socket", path=global_ns.focused_nvim_addr) as nvim_handle:
+            if not SUPER_QUIET:
+                nvim_handle.command("echom '[nvim-ghost] Servers started'")
 
 
 def _signal_handler(_signal, _):
