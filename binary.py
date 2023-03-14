@@ -1,5 +1,4 @@
 import json
-import multiprocessing
 import os
 import platform
 import random
@@ -20,12 +19,13 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.3.2"
+BUILD_VERSION: str = "v0.4.0"
 
 WINDOWS: bool = os.name == "nt"
 LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
 SUPER_QUIET: bool = bool(os.environ.get("NVIM_GHOST_SUPER_QUIET", False))
 SERVER_PORT: str = os.environ.get("GHOSTTEXT_SERVER_PORT", "4001")
+FOCUSED_NVIM_ADDRESS = os.environ.get("NVIM_LISTEN_ADDRESS", None)
 LOGGING_ENABLED: bool = False
 if os.environ.get("NVIM_GHOST_LOGGING_ENABLED") is not None:
     if os.environ.get("NVIM_GHOST_LOGGING_ENABLED").isdigit():
@@ -33,16 +33,10 @@ if os.environ.get("NVIM_GHOST_LOGGING_ENABLED") is not None:
     else:
         sys.exit("Invalid value of $NVIM_GHOST_LOGGING_ENABLED")
 
-if platform.system() == "Darwin":
-    multiprocessing.set_start_method("fork")
-process_manager = multiprocessing.Manager()
-global_ns = process_manager.Namespace()
-global_ns.focused_nvim_addr = os.environ.get("NVIM_LISTEN_ADDRESS", None)
-
 
 if not SERVER_PORT.isdigit():
-    if global_ns.focused_nvim_addr is not None:
-        with pynvim.attach("socket", path=global_ns.focused_nvim_addr) as nvim_handle:
+    if FOCUSED_NVIM_ADDRESS is not None:
+        with pynvim.attach("socket", path=FOCUSED_NVIM_ADDRESS) as nvim_handle:
             if not SUPER_QUIET:
                 nvim_handle.command(
                     "echom '[nvim-ghost] Invalid port. "
@@ -186,7 +180,8 @@ class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
 
         """
 
-        if global_ns.focused_nvim_addr is None:
+        global FOCUSED_NVIM_ADDRESS
+        if FOCUSED_NVIM_ADDRESS is None:
             # There's no neovim instance to handle our request
             return
         # In f-strings, to insert literal {, we need to escape it using another {
@@ -235,8 +230,10 @@ class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
         """
         _, address = urllib.parse.parse_qsl(query_string)[0]
         self._respond(address)
-        if global_ns.focused_nvim_addr != address:
-            global_ns.focused_nvim_addr = address
+
+        global FOCUSED_NVIM_ADDRESS
+        if FOCUSED_NVIM_ADDRESS != address:
+            FOCUSED_NVIM_ADDRESS = address
             log(f"Focus {address}")
 
     def _session_closed_responder(self, query_string):
@@ -248,8 +245,10 @@ class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
         _, address = urllib.parse.parse_qsl(query_string)[0]
         self._respond(address)
         log(f"{address} session closed")
-        if address == global_ns.focused_nvim_addr:
-            global_ns.focused_nvim_addr = None
+
+        global FOCUSED_NVIM_ADDRESS
+        if address == FOCUSED_NVIM_ADDRESS:
+            FOCUSED_NVIM_ADDRESS = None
 
     def _respond(self, text):
         """
@@ -312,7 +311,8 @@ class GhostWebSocket(WebSocket):
     # New connection
     def connected(self):
         # Create and setup the buffer
-        self.neovim_address = global_ns.focused_nvim_addr
+        global FOCUSED_NVIM_ADDRESS
+        self.neovim_address = FOCUSED_NVIM_ADDRESS
         self.neovim_handle = pynvim.attach("socket", path=self.neovim_address)
         self.buffer_handle = self.neovim_handle.api.create_buf(False, True)
         self.neovim_handle.api.buf_set_option(self.buffer_handle, "bufhidden", "wipe")
@@ -424,7 +424,6 @@ class GhostWebSocket(WebSocket):
             ":".join([str(_) for _ in self.address]),
             "closed by us",
         )
-        self.close()
 
     def __init__(self, *args, **kwargs):
         self.nvim_addr_vs_websocket: Dict[str, List[GhostWebSocket]] = {}
@@ -443,11 +442,11 @@ class Server:
     def __init__(self):
         self.http_server = self._http_server()
         self.websocket_server = self._websocket_server()
-        self.http_server_process = multiprocessing.Process(
+        self.http_server_thread = threading.Thread(
             target=self._http_server_serve_forever,
             daemon=True,
         )
-        self.websocket_server_process = multiprocessing.Process(
+        self.websocket_server_thread = threading.Thread(
             target=self.websocket_server.serve_forever,
             daemon=True,
         )
@@ -480,13 +479,13 @@ if LOGGING_ENABLED:
     sys.stdout = open("stdout.log", "w", buffering=1)
     sys.stderr = open("stderr.log", "w", buffering=1)
     print(time.strftime("%A, %d %B %Y, %H:%M:%S"))
-    print(f"$NVIM_LISTEN_ADDRESS: {global_ns.focused_nvim_addr}")
+    print(f"$NVIM_LISTEN_ADDRESS: {FOCUSED_NVIM_ADDRESS}")
     print(f"binary {BUILD_VERSION}")
-servers.http_server_process.start()
-servers.websocket_server_process.start()
+servers.http_server_thread.start()
+servers.websocket_server_thread.start()
 print("Servers started")
-if global_ns.focused_nvim_addr is not None:
-    with pynvim.attach("socket", path=global_ns.focused_nvim_addr) as nvim_handle:
+if FOCUSED_NVIM_ADDRESS is not None:
+    with pynvim.attach("socket", path=FOCUSED_NVIM_ADDRESS) as nvim_handle:
         if not SUPER_QUIET:
             nvim_handle.command("echom '[nvim-ghost] Servers started'")
 
@@ -503,6 +502,6 @@ signal.signal(signal.SIGINT, _signal_handler)
 signal.signal(signal.SIGTERM, _signal_handler)
 
 # wait for HTTPServer thread to exit
-servers.http_server_process.join()
+servers.http_server_thread.join()
 
 # vim: et ts=4 sw=4 sts=4
