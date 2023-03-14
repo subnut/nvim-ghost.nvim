@@ -20,7 +20,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.3.1"
+BUILD_VERSION: str = "v0.3.2"
 
 WINDOWS: bool = os.name == "nt"
 LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
@@ -424,6 +424,7 @@ class GhostWebSocket(WebSocket):
             ":".join([str(_) for _ in self.address]),
             "closed by us",
         )
+        self.close()
 
     def __init__(self, *args, **kwargs):
         self.nvim_addr_vs_websocket: Dict[str, List[GhostWebSocket]] = {}
