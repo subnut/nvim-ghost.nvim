@@ -1,6 +1,7 @@
 import json
 import multiprocessing
 import os
+import platform
 import random
 import signal
 import socket
@@ -19,7 +20,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.3.0"
+BUILD_VERSION: str = "v0.3.1"
 
 WINDOWS: bool = os.name == "nt"
 LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
@@ -32,7 +33,8 @@ if os.environ.get("NVIM_GHOST_LOGGING_ENABLED") is not None:
     else:
         sys.exit("Invalid value of $NVIM_GHOST_LOGGING_ENABLED")
 
-
+if platform.system() == "Darwin":
+    multiprocessing.set_start_method("fork")
 process_manager = multiprocessing.Manager()
 global_ns = process_manager.Namespace()
 global_ns.focused_nvim_addr = os.environ.get("NVIM_LISTEN_ADDRESS", None)
