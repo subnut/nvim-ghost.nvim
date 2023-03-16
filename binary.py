@@ -419,6 +419,7 @@ class GhostWebSocket(WebSocket):
         self.neovim_handle.command(f"doau nvim_ghost_user_autocommands User {url}")
 
     def _do_close(self):
+        self.close()
         log(
             "Websocket",
             ":".join([str(_) for _ in self.address]),
