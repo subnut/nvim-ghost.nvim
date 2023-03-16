@@ -1,6 +1,5 @@
 import json
 import os
-import platform
 import random
 import signal
 import socket
