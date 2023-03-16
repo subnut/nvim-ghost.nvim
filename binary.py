@@ -27,6 +27,7 @@ SUPER_QUIET: bool = bool(os.environ.get("NVIM_GHOST_SUPER_QUIET", False))
 SERVER_PORT: str = os.environ.get("GHOSTTEXT_SERVER_PORT", "4001")
 FOCUSED_NVIM_ADDRESS = os.environ.get("NVIM_LISTEN_ADDRESS", None)
 LOGGING_ENABLED: bool = False
+VERBOSE_LOGGING: bool = bool(os.environ.get("NVIM_GHOST_VERBOSE_LOGGING"))
 if os.environ.get("NVIM_GHOST_LOGGING_ENABLED") is not None:
     if os.environ.get("NVIM_GHOST_LOGGING_ENABLED").isdigit():
         LOGGING_ENABLED = bool(int(os.environ.get("NVIM_GHOST_LOGGING_ENABLED")))
@@ -56,6 +57,12 @@ os.chdir(os.path.dirname(os.path.abspath(sys.argv[0])))
 
 def log(*args, **kwargs):
     print(time.strftime("[%H:%M:%S]:"), *args, **kwargs)
+
+
+if VERBOSE_LOGGING:
+    logv = log
+else:
+    logv = lambda *args, **kwargs: None
 
 
 def _port_occupied(port) -> bool:
@@ -265,7 +272,7 @@ class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
 class GhostWebSocket(WebSocket):
     # New message received
     def handle(self):
-        log(f"{self.address[1]} got", self.data)
+        logv(f"From {self.address[1]} got", self.data)
 
         # Extract the data
         data = json.loads(self.data)
@@ -366,7 +373,7 @@ class GhostWebSocket(WebSocket):
         self.loop_neovim_handle.run_loop(None, self._neovim_handler)
 
     def _neovim_handler(self, *args):
-        log(f"nvim_event  handle={self.handle_neovim_notifications}  {args}")
+        logv(f"nvim_event  handle={self.handle_neovim_notifications}  {args}")
         if not self.handle_neovim_notifications:
             # Resume handling notifications, because this notification has been
             # triggered by the buffer changes we have done above.
@@ -413,12 +420,16 @@ class GhostWebSocket(WebSocket):
             message = {"text": text, "selections": [{"start": curpos, "end": curpos}]}
             message = json.dumps(message)
             self.send_message(message)
-            log(f"{self.address[1]} sent", message)
+            logv(f"To {self.address[1]} sent", message)
 
     def _trigger_autocmds(self, url: str):
         self.neovim_handle.command(f"doau nvim_ghost_user_autocommands User {url}")
 
     def _do_close(self):
+        log(
+            "Closing websocket",
+            ":".join([str(_) for _ in self.address]),
+        )
         self.close()
         log(
             "Websocket",
