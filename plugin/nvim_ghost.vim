@@ -2,8 +2,12 @@ if !has('nvim')
   finish
 endif
 
+if get(g:,'nvim_ghost_disabled', 0)
+  finish
+endif
+
 " Config
-let g:nvim_ghost_disabled         = get(g:,'nvim_ghost_disabled', 0)
+let g:nvim_ghost_autostart        = get(g:,'nvim_ghost_autostart', 1)
 let g:nvim_ghost_use_script       = get(g:,'nvim_ghost_use_script', 0)
 let g:nvim_ghost_super_quiet      = get(g:,'nvim_ghost_super_quiet', 0)
 let g:nvim_ghost_logging_enabled  = get(g:,'nvim_ghost_logging_enabled', 0)
@@ -44,10 +48,9 @@ if g:nvim_ghost_use_script
   endif
 endif
 
-" If disabled, add :GhostTextEnable command
-if g:nvim_ghost_disabled
-  let s:filename = expand('<sfile>:p')
-  command! GhostTextEnable
+" If autostart is disabled, add GhostTextStart command
+if !g:nvim_ghost_autostart
+  command! GhostTextStart
         \  let g:nvim_ghost_disabled = 0
         \| call nvim_ghost#init()
         \| doau <nomodeline> nvim_ghost UIEnter

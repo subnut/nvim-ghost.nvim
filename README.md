@@ -78,10 +78,15 @@ let g:nvim_ghost_super_quiet = 1
 :warning: **EXPERIMENTAL:** hasn't been tested thoroughly  
 Add this line to your `init.vim` -
 ```vim
+let g:nvim_ghost_autostart = 0
+```
+and then, when you need the plugin, run `:GhostTextStart` to enable the plugin for that specific neovim instance.
+
+## Disable the plugin
+If, for any reason, you want to disable the plugin completely, add this to your `init.vim` -
+```vim
 let g:nvim_ghost_disabled = 1
 ```
-and then, when you need the plugin, run `:GhostTextEnable` to enable the plugin for that specific neovim instance.
-
 <br>
 
 <h1 id="other_oses">Other Operating Systems</h1>
