@@ -2,14 +2,14 @@ if !has('nvim')
   finish
 endif
 
-function! nvim_ghost#init()
+function! nvim_ghost#init(defer = 1)
   if !g:nvim_ghost_use_script && (!filereadable(g:nvim_ghost_binary_path) ||
         \ readfile(g:nvim_ghost_installation_dir .. 'binary_version')[0]  !=
         \ readfile(g:nvim_ghost_binary_path .. ".version")[0]
         \)
     call nvim_ghost#installer#install(function("nvim_ghost#enable"))
   else
-    call nvim_ghost#enable(1)
+    call nvim_ghost#enable(a:defer)
   endif
 endfunction
 

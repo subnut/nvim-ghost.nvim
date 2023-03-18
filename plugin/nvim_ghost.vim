@@ -51,12 +51,18 @@ endif
 
 " If autostart is disabled, add GhostTextStart command
 if !g:nvim_ghost_autostart
-  command! GhostTextStart
-        \| call nvim_ghost#init()
-        \| doau <nomodeline> nvim_ghost UIEnter
-        \| delcommand GhostTextStart
-        \| command GhostTextStop
-        \| call nvim_ghost#disable()
+  command! GhostTextStart call s:GhostTextStart()
+  fun! s:GhostTextStart()
+    call nvim_ghost#init(0)
+    doau <nomodeline> nvim_ghost UIEnter
+    delcommand GhostTextStart
+    command GhostTextStop call s:GhostTextStop()
+  endfun
+  fun! s:GhostTextStop()
+    call nvim_ghost#disable()
+    delcommand GhostTextStop
+    command GhostTextStart call s:GhostTextStart()
+  endfun
   finish
 endif
 
