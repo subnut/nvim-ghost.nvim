@@ -1,7 +1,6 @@
 <h1 align="center"><b><u><tt>nvim-ghost.nvim</tt></u></b></h1>
 
-This is a neovim-only plugin for
-[GhostText](https://github.com/GhostText/GhostText)
+This is a neovim plugin for [GhostText](https://github.com/GhostText/GhostText)
 
 # Installation
 
@@ -21,8 +20,8 @@ Really, it's _that_ simple!
 # Features
 
 - **Zero** dependencies! Does not even need python installed!
-- Supports **neovim running inside WSL** (Windows Subsystem for Linux)
-- Supports Linux, macOS, **Windows** out-of-the-box (_for other OSes, please see [below](#other_oses)_)
+- Supports <b>neovim running inside <abbr title="Windows Subsystem for Linux">WSL</abbr></b>
+- Supports Linux, macOS, Windows out-of-the-box (_for other OSes, please see [below](#other_oses)_)
 
 # Customization
 
@@ -50,19 +49,19 @@ Some examples -
 
 ```vim
 " Autocommand for a single website (i.e. stackoverflow.com)
-au nvim_ghost_user_autocommands User www.stackoverflow.com set filetype=markdown
+au nvim_ghost_user_autocommands User www.stackoverflow.com setfiletype markdown
 
 " Autocommand for a multiple websites
-au nvim_ghost_user_autocommands User www.reddit.com,www.github.com set filetype=markdown
+au nvim_ghost_user_autocommands User www.reddit.com,www.github.com setfiletype markdown
 
 " Autocommand for a domain (i.e. github.com)
-au nvim_ghost_user_autocommands User *github.com set filetype=markdown
+au nvim_ghost_user_autocommands User *github.com setfiletype markdown
 
 " Multiple autocommands can be specified like so -
 augroup nvim_ghost_user_autocommands
-  au User www.reddit.com,www.stackoverflow.com set filetype=markdown
-  au User www.reddit.com,www.github.com set filetype=markdown
-  au User *github.com set filetype=markdown
+  au User www.reddit.com,www.stackoverflow.com setfiletype markdown
+  au User www.reddit.com,www.github.com setfiletype markdown
+  au User *github.com setfiletype markdown
 augroup END
 ```
 
@@ -82,19 +81,18 @@ let g:nvim_ghost_disabled = 1
 <br>
 
 <h1 id="other_oses">Other Operating Systems</h1>
-Please understand my situation. This plugin primarily uses a binary with it's
-own packaged version of python3 and comes with the required packages
-pre-installed, but the binary itself needs to be made on a machine running the
-same OS as the target machine. (i.e. the Linux binary needs to be built on a
-Linux machine, macOS binary on macOS, etc.)
+This plugin uses a binary with its own packaged version of python3 and comes
+with the required packages pre-installed, but the binary itself needs to be
+made on a machine running the same OS as the target machine. (i.e. the Linux
+binary needs to be built on a Linux machine, macOS binary on macOS, etc.)
 
 The binaries are made using GitHub Actions, which only provides Linux, Windows
 and macOS containers. So, it is impossible for me to distribute binaries for
 other OSes.
 
 So, to use this plugin, you shall need to install python3 (with pip) in your
-system. Then, head off to this plugin's directory, and run -
-```
+system. Then, go to the directory where this plugin is installed and run -
+```sh
 python -m pip install -r requirements.txt
 ```
 This needs to be done only once. This command installs the required packages
