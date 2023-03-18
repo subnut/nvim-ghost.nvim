@@ -1,22 +1,21 @@
-echo "Preparing to download nvim-ghost binary..."
+Write-Output "Preparing to download nvim-ghost binary..."
+Set-Location (Resolve-Path -Path ((Split-Path $myInvocation.MyCommand.Path) + "\.."))
 
-$rootDir = Resolve-Path -Path ((Split-Path $myInvocation.MyCommand.Path) + "\..")
-$version = Get-Content "$rootDir\binary_version"
-$assetName = "nvim-ghost-win64.zip"
-$assetPath = "$rootDir\$assetName"
-$outFile = "$rootDir\nvim-ghost-binary.exe"
+$version = Get-Content "binary_version"
+$asset = "nvim-ghost-win64.zip"
+$binary = "nvim-ghost-binary.exe"
 
 # Delete previous partial downloads
-if (Test-Path $assetName) {
-  rm "$assetName"
-}
+Remove-Item -ErrorAction:Ignore "$asset"
 
 # Delete current binary
-if (Test-Path $outFile) {
+Remove-Item -ErrorAction:Ignore "$binary"
+Remove-Item -ErrorAction:Ignore "$binary.version"
+if (Test-Path $binary) {
   echo "Binary still running"
-  while (Test-Path $outFile) {
+  while (Test-Path $binary) {
     try {
-      rm "$outFile" -ErrorAction Stop
+      Remove-Item -ErrorAction:Stop "$binary"
     }
     catch {
       echo "Please run ':call nvim_ghost#helper#kill_server()' in neovim"
@@ -24,13 +23,12 @@ if (Test-Path $outFile) {
     }
   }
 }
-rm "$outFile.version"
 
 echo "Downloading binary..."
 Invoke-WebRequest `
-  -uri "https://github.com/subnut/nvim-ghost.nvim/releases/download/$version/$assetName" `
-  -OutFile ( New-Item -Path "$assetPath" -Force )
-Expand-Archive -LiteralPath "$assetPath" -DestinationPath "$rootDir"
-rm "$assetPath"
+  -uri "https://github.com/subnut/nvim-ghost.nvim/releases/download/$version/$asset" `
+  -OutFile "$asset"
+Expand-Archive "$asset"
+Remove-Item "$asset"
 
 # vim: et sw=2 ts=2 sts=2
