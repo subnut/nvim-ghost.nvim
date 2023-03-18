@@ -9,7 +9,6 @@ endif
 " Config
 let g:nvim_ghost_autostart        = get(g:,'nvim_ghost_autostart', 1)
 let g:nvim_ghost_use_script       = get(g:,'nvim_ghost_use_script', 0)
-let g:nvim_ghost_super_quiet      = get(g:,'nvim_ghost_super_quiet', 0)
 let g:nvim_ghost_logging_enabled  = get(g:,'nvim_ghost_logging_enabled', 0)
 let g:nvim_ghost_server_port      = get(g:,'nvim_ghost_server_port', get(environ(),'GHOSTTEXT_SERVER_PORT', 4001))
 
@@ -26,9 +25,8 @@ let g:nvim_ghost_binary_path = g:nvim_ghost_installation_dir .. 'nvim-ghost-bina
 
 " Setup environment
 let $NVIM_LISTEN_ADDRESS        = v:servername
-let $NVIM_GHOST_SUPER_QUIET     = g:nvim_ghost_super_quiet
-let $NVIM_GHOST_LOGGING_ENABLED = g:nvim_ghost_logging_enabled
 let $GHOSTTEXT_SERVER_PORT      = g:nvim_ghost_server_port
+let $NVIM_GHOST_LOGGING_ENABLED = g:nvim_ghost_logging_enabled
 
 " Abort if script_mode is enabled but infeasible
 if g:nvim_ghost_use_script
