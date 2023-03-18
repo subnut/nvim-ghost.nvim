@@ -18,7 +18,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.4.1"
+BUILD_VERSION: str = "v0.5.0"
 
 WINDOWS: bool = os.name == "nt"
 LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
@@ -45,6 +45,8 @@ if not SERVER_PORT.isdigit():
     sys.exit("Port must be a number")
 GHOST_PORT: int = int(SERVER_PORT)
 
+AUTOEXIT: bool = bool(os.environ.get("NVIM_GHOST_AUTO_EXIT"))
+NVIM_ADDRESSES = [FOCUSED_NVIM_ADDRESS] if FOCUSED_NVIM_ADDRESS is not None else []
 
 # chdir to folder containing binary
 # otherwise the logs are generated whereever the server was started from (i.e curdir)
@@ -242,6 +244,10 @@ class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
             FOCUSED_NVIM_ADDRESS = address
             log(f"Focus {address}")
 
+        global NVIM_ADDRESSES
+        if FOCUSED_NVIM_ADDRESS not in NVIM_ADDRESSES:
+            NVIM_ADDRESSES.append(FOCUSED_NVIM_ADDRESS)
+
     def _session_closed_responder(self, query_string):
         """
         A neovim instance is reporting that it has been closed
@@ -255,6 +261,11 @@ class GhostHTTPRequestHandler(BaseHTTPRequestHandler):
         global FOCUSED_NVIM_ADDRESS
         if address == FOCUSED_NVIM_ADDRESS:
             FOCUSED_NVIM_ADDRESS = None
+
+        global NVIM_ADDRESSES
+        NVIM_ADDRESSES.remove(address)
+        if AUTOEXIT and len(NVIM_ADDRESSES) == 0:
+            self.server.running = False
 
     def _respond(self, text):
         """

@@ -26,6 +26,7 @@ let g:nvim_ghost_binary_path = g:nvim_ghost_installation_dir .. 'nvim-ghost-bina
 
 " Setup environment
 let $NVIM_LISTEN_ADDRESS        = v:servername
+let $NVIM_GHOST_AUTO_EXIT       = !g:nvim_ghost_autostart
 let $NVIM_GHOST_SUPER_QUIET     = g:nvim_ghost_super_quiet
 let $NVIM_GHOST_LOGGING_ENABLED = g:nvim_ghost_logging_enabled
 let $GHOSTTEXT_SERVER_PORT      = g:nvim_ghost_server_port
@@ -51,10 +52,11 @@ endif
 " If autostart is disabled, add GhostTextStart command
 if !g:nvim_ghost_autostart
   command! GhostTextStart
-        \  let g:nvim_ghost_disabled = 0
         \| call nvim_ghost#init()
         \| doau <nomodeline> nvim_ghost UIEnter
-        \| delcommand GhostTextEnable
+        \| delcommand GhostTextStart
+        \| command GhostTextStop
+        \| call nvim_ghost#disable()
   finish
 endif
 

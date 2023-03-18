@@ -23,6 +23,14 @@ function! s:start_server_or_request_focus()
   endif
 endfunction
 
+function! nvim_ghost#disable()
+  call nvim_ghost#helper#session_closed()
+  autocmd! nvim_ghost
+  if !exists('g:_nvim_ghost_supports_focus')
+    autocmd! _nvim_ghost_does_not_support_focus
+  endif
+endfunction
+
 function! nvim_ghost#enable(defer = 0)
   if !a:defer
     call s:start_server_or_request_focus()
