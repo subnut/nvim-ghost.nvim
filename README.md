@@ -20,7 +20,7 @@ Really, it's _that_ simple!
 # Features
 
 - **Zero** dependencies! Does not even need python installed!
-- Supports <b>neovim running inside <abbr title="Windows Subsystem for Linux">WSL</abbr></b>
+- Supports neovim running inside **WSL** (Windows Subsystem for Linux)
 - Supports Linux, macOS, Windows out-of-the-box (_for other OSes, please see [below](#other_oses)_)
 
 # Customization
