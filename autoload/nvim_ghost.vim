@@ -16,15 +16,15 @@ endfunction
 function! s:start_server_or_request_focus()
   " If we start the server, we are already focused, so we don't need to
   " request_focus separately
-  if ! nvim_ghost#helper#is_running()
-    call nvim_ghost#helper#start_server()
+  if ! nvim_ghost#server#is_running()
+    call nvim_ghost#server#start_server()
   else
-    call nvim_ghost#helper#request_focus()
+    call nvim_ghost#server#request_focus()
   endif
 endfunction
 
 function! nvim_ghost#disable()
-  call nvim_ghost#helper#session_closed()
+  call nvim_ghost#server#session_closed()
   autocmd! nvim_ghost
   if !exists('g:_nvim_ghost_supports_focus')
     autocmd! _nvim_ghost_does_not_support_focus
@@ -41,8 +41,8 @@ function! nvim_ghost#enable(defer = 0)
     if a:defer
       autocmd UIEnter   * call s:start_server_or_request_focus()
     endif
-    autocmd FocusGained * call nvim_ghost#helper#request_focus()
-    autocmd VimLeavePre * call nvim_ghost#helper#session_closed()
+    autocmd FocusGained * call nvim_ghost#server#request_focus()
+    autocmd VimLeavePre * call nvim_ghost#server#session_closed()
   augroup END
 
   " :doau causes error if augroup not defined
@@ -72,7 +72,7 @@ function! nvim_ghost#enable(defer = 0)
     let s:focused = v:true
     fun! s:focus_gained()
       if !s:focused
-        call nvim_ghost#helper#request_focus()
+        call nvim_ghost#server#request_focus()
         let s:focused = v:true
       endif
     endfun

@@ -11,7 +11,7 @@ Remove-Item -ErrorAction:Ignore "$binary.version"
 
 if (Test-Path "$binary") {
   Write-Output "Binary still running"
-  Write-Output "Please run ':call nvim_ghost#helper#kill_server()' in neovim"
+  Write-Output "Please run ':call nvim_ghost#server#kill_server()' in neovim"
   while (Test-Path "$binary") {
     try { Remove-Item -ErrorAction:Stop "$binary" }
     catch { Start-Sleep -Seconds 1 }

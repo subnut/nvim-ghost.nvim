@@ -11,15 +11,15 @@ endif
 let s:saved_updatetime = &updatetime
 let s:can_use_cursorhold = v:false
 let s:joblog_arguments = !g:nvim_ghost_logging_enabled ? {} : {
-      \'on_stdout':{id,data,type->nvim_ghost#helper#joboutput_logger(data,type)},
-      \'on_stderr':{id,data,type->nvim_ghost#helper#joboutput_logger(data,type)},
+      \'on_stdout':{id,data,type->nvim_ghost#server#joboutput_logger(data,type)},
+      \'on_stderr':{id,data,type->nvim_ghost#server#joboutput_logger(data,type)},
       \}
 let s:joblog_arguments_nokill = extend(copy(s:joblog_arguments), {
       \'detach': v:true,
       \'cwd': g:nvim_ghost_installation_dir,
       \})
 
-function! nvim_ghost#helper#is_running() abort  " {{{1
+function! nvim_ghost#server#is_running() abort  " {{{1
   let v:errmsg = ''
   let l:url = s:localhost .. ':' .. $GHOSTTEXT_SERVER_PORT
   let l:opts = #{ data_buffered: v:true }
@@ -76,10 +76,10 @@ function! s:send_GET_request(url) abort "{{{1
   call chansend(l:connection, "\r\n")
 
   " We're done, log what we sent
-  call nvim_ghost#helper#joboutput_logger(['Sent ' . a:url], '')
+  call nvim_ghost#server#joboutput_logger(['Sent ' . a:url], '')
 endfunction
 
-function! nvim_ghost#helper#start_server() abort " {{{1
+function! nvim_ghost#server#start_server() abort " {{{1
   if has('win32')
     call jobstart(['cscript.exe',
           \g:nvim_ghost_scripts_dir . 'start_server.vbs'])
@@ -95,19 +95,19 @@ function! nvim_ghost#helper#start_server() abort " {{{1
   endif
 endfunction
 
-function! nvim_ghost#helper#kill_server() abort  " {{{1
+function! nvim_ghost#server#kill_server() abort  " {{{1
   call s:send_GET_request('/exit')
 endfunction
 
-function! nvim_ghost#helper#request_focus() abort  " {{{1
+function! nvim_ghost#server#request_focus() abort  " {{{1
   call s:send_GET_request('/focus?focus=' . v:servername)
 endfunction
 
-function! nvim_ghost#helper#session_closed() abort " {{{1
+function! nvim_ghost#server#session_closed() abort " {{{1
   call s:send_GET_request('/session-closed?session=' . v:servername)
   call rpcnotify(0, "nvim_ghost_exit_event")
 endfunction
-function! nvim_ghost#helper#joboutput_logger(data,type) abort  " {{{1
+function! nvim_ghost#server#joboutput_logger(data,type) abort  " {{{1
   if !g:nvim_ghost_logging_enabled || g:nvim_ghost_super_quiet
     return
   endif

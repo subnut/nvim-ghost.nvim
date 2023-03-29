@@ -18,7 +18,7 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.5.1"
+BUILD_VERSION: str = "v0.5.1-keepbuf.1"
 
 WINDOWS: bool = os.name == "nt"
 LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
@@ -370,7 +370,9 @@ class GhostWebSocket(WebSocket):
         )
 
         # Delete buffer and stop event loop
-        self.neovim_handle.command(f"bdelete {self.buffer_handle.number}")
+        self.neovim_handle.command(
+            f"call nvim_ghost#helpers#buf_del({self.buffer_handle.number})"
+        )
         self.neovim_handle.close()
         self.loop_neovim_handle.stop_loop()
         self.loop_neovim_handle.close()

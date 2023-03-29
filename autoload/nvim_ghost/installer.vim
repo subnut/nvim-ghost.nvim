@@ -13,8 +13,8 @@ function! s:report_result(exitcode) abort
 endfunction
 
 function! nvim_ghost#installer#install(callback) abort
-  if nvim_ghost#helper#is_running()
-    call nvim_ghost#helper#kill_server()
+  if nvim_ghost#server#is_running()
+    call nvim_ghost#server#kill_server()
   endif
 
   echom '[nvim-ghost] Downloading binary'
