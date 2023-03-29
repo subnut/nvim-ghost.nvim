@@ -18,22 +18,35 @@ import requests
 from simple_websocket_server import WebSocket
 from simple_websocket_server import WebSocketServer
 
-BUILD_VERSION: str = "v0.5.0"
+BUILD_VERSION: str = "v0.5.1"
 
 WINDOWS: bool = os.name == "nt"
 LOCALHOST: str = "127.0.0.1" if WINDOWS else "localhost"
-SUPER_QUIET: bool = bool(os.environ.get("NVIM_GHOST_SUPER_QUIET", False))
-SERVER_PORT: str = os.environ.get("GHOSTTEXT_SERVER_PORT", "4001")
-FOCUSED_NVIM_ADDRESS = os.environ.get("NVIM_LISTEN_ADDRESS", None)
 LOGGING_ENABLED: bool = False
-VERBOSE_LOGGING: bool = bool(os.environ.get("NVIM_GHOST_VERBOSE_LOGGING"))
-if os.environ.get("NVIM_GHOST_LOGGING_ENABLED") is not None:
-    if os.environ.get("NVIM_GHOST_LOGGING_ENABLED").isdigit():
-        LOGGING_ENABLED = bool(int(os.environ.get("NVIM_GHOST_LOGGING_ENABLED")))
-    else:
-        sys.exit("Invalid value of $NVIM_GHOST_LOGGING_ENABLED")
 
 
+def envbool(envvar: str, default: str = False) -> bool:
+    val = os.environ.get(envvar)
+    if val is None:
+        return False
+    if val.isdigit():
+        val = int(val)
+        if val in (0, 1):
+            return bool(val)
+    raise ValueError(
+        f"The environment variable '{envvar}', if set, should be set to either 0 or 1"
+    )
+
+
+AUTOEXIT: bool = envbool("NVIM_GHOST_AUTO_EXIT")
+SUPER_QUIET: bool = envbool("NVIM_GHOST_SUPER_QUIET")
+LOGGING_ENABLED: bool = envbool("NVIM_GHOST_LOGGING_ENABLED")
+VERBOSE_LOGGING: bool = envbool("NVIM_GHOST_VERBOSE_LOGGING")
+
+FOCUSED_NVIM_ADDRESS = os.environ.get("NVIM_LISTEN_ADDRESS", None)
+NVIM_ADDRESSES = [FOCUSED_NVIM_ADDRESS] if FOCUSED_NVIM_ADDRESS is not None else []
+
+SERVER_PORT: str = os.environ.get("GHOSTTEXT_SERVER_PORT", "4001")
 if not SERVER_PORT.isdigit():
     if FOCUSED_NVIM_ADDRESS is not None:
         with pynvim.attach("socket", path=FOCUSED_NVIM_ADDRESS) as nvim_handle:
@@ -44,9 +57,6 @@ if not SERVER_PORT.isdigit():
                 )
     sys.exit("Port must be a number")
 GHOST_PORT: int = int(SERVER_PORT)
-
-AUTOEXIT: bool = bool(os.environ.get("NVIM_GHOST_AUTO_EXIT"))
-NVIM_ADDRESSES = [FOCUSED_NVIM_ADDRESS] if FOCUSED_NVIM_ADDRESS is not None else []
 
 # chdir to folder containing binary
 # otherwise the logs are generated whereever the server was started from (i.e curdir)
