@@ -463,7 +463,7 @@ class GhostWebSocket(WebSocket):
 
 
 class GhostWebSocketServer(WebSocketServer):
-    # This is nessecary because the imported WebSocketServer does not store
+    # This is necessary because the imported WebSocketServer does not store
     # it's port number.   Yes, I have seen the source code. It doesn't.
     def __init__(self, host, port, websocketclass, **kwargs):
         self.port = port
