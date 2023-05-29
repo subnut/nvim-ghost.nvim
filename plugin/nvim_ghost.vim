@@ -54,7 +54,6 @@ if !g:nvim_ghost_autostart
   command! GhostTextStart call s:GhostTextStart()
   fun! s:GhostTextStart()
     call nvim_ghost#init(0)
-    doau <nomodeline> nvim_ghost UIEnter
     delcommand GhostTextStart
     command GhostTextStop call s:GhostTextStop()
   endfun
