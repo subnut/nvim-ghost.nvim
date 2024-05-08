@@ -1,6 +1,12 @@
-<h1 align="center"><b><u><tt>nvim-ghost.nvim</tt></u></b></h1>
+<h1 align="left">
+  <b><u><tt>nvim-ghost.nvim</tt></u></b>
+  <a href="https://www.buymeacoffee.com/subnut">
+    <img align="right" src="https://img.buymeacoffee.com/button-api/?text=Buy me a pizza&emoji=🍕&slug=subnut&button_colour=5F7FFF&font_colour=ffffff&font_family=Cookie&outline_colour=000000&coffee_colour=FFDD00" />
+  </a>
+</h1>
 
 This is a neovim plugin for [GhostText](https://github.com/GhostText/GhostText)
+
 
 # Installation
 
