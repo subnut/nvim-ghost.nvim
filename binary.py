@@ -444,6 +444,12 @@ class GhostWebSocket(WebSocket):
 
     def _trigger_autocmds(self, url: str):
         self.neovim_handle.command(f"doau nvim_ghost_user_autocommands User {url}")
+        self.neovim_handle.api.exec_autocmds("User", {
+            "pattern": "GhostTextAttach",
+            "data": {
+                "url": url
+            }
+        })
 
     def _do_close(self):
         log(

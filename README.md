@@ -45,13 +45,24 @@ Replace `4001` with the port number you have set in the browser extension
 
 ## Custom settings according to website
 
-When you trigger GhostText, nvim-ghost triggers an `User` autocommand. You can
-listen for that autocommand and run your own commands (e.g. setting filetype)
-
-**NOTE:** All the autocommands should be in the `nvim_ghost_user_autocommands`
-augroup
-
+When you trigger GhostText, nvim-ghost triggers an `User` autocommand. You
+can either use `nvim_create_autocmd()` to listen for the `GhostTextAttach`
+pattern and retrieve the URL from the `data.url` callback parameter (Lua), or
+create an autocommand in the `nvim_ghost_user_autocommands` augroup and
+pattern match against the URL directly to set the filetype.
 Some examples -
+
+```lua
+vim.api.nvim_create_autocmd({ 'User' }, {
+  group = vim.api.nvim_create_augroup('NvimGhostText', { clear = true }),
+  pattern = {"GhostTextAttach"},
+  callback = function(ev)
+    if ev.data.url == "github.com" then
+      vim.o.filetype = "markdown"
+    end
+  end,
+})
+```
 
 ```vim
 " Autocommand for a single website (i.e. stackoverflow.com)
