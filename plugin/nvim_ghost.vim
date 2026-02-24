@@ -33,13 +33,6 @@ let $GHOSTTEXT_SERVER_PORT      = g:nvim_ghost_server_port
 
 " Abort if script_mode is enabled but infeasible
 if g:nvim_ghost_use_script
-  if has('win32')
-    echohl WarningMsg
-    echom 'Sorry, g:nvim_ghost_use_script is currently not available on
-          \ Windows. Please remove it from your init.vim to use nvim-ghost.'
-    echohl None
-    finish
-  endif
   if !exists('g:nvim_ghost_python_executable')
     echohl WarningMsg
     echom 'Please set g:nvim_ghost_python_executable
