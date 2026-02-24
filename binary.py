@@ -3,6 +3,7 @@ import os
 import random
 import signal
 import socket
+import string
 import sys
 import threading
 import time
@@ -38,6 +39,44 @@ def envbool(envvar: str, default: str = False) -> bool:
     )
 
 
+def attach_to_nvim(address):
+    """
+    Parses the address and invokes `pynvim.attach`.
+
+    pynvim supports the following transport methods: 'tcp', 'socket', 'child',
+    and 'stdio'. Currently we only support 'tcp' and 'socket'. 'child' and
+    'stdio' are not relevant because we run as a daemon and serve requests from
+    multiple nvim instances.
+
+    We decide between 'tcp' and 'socket' based on the following heuristic,
+    copied from nvim itself (see `socket_watcher_init`):
+
+    - If address is a letter followed by a colon and slash/backslash, it's a
+      (Windows) path to a socket.
+    - If the address contains a colon, it's a TCP address. The text after the
+      last colon is the port and the text before it is the host.
+    - Otherwise it's a path.
+    """
+    is_win_path = (len(address) >= 3
+                   and address[0] in string.ascii_letters
+                   and address[1] == ':'
+                   and address[2] in '/\\')
+    if is_win_path:
+        session_type = 'socket'
+    elif ':' in address:
+        colon_idx = address.rindex(':')
+        session_type = 'tcp'
+        port = int(address[colon_idx + 1:])
+        host = address[:colon_idx]
+    else:
+        session_type = 'socket'
+
+    if session_type == 'socket':
+        return pynvim.attach(session_type, path=address)
+    else:
+        return pynvim.attach(session_type, address=host, port=port)
+
+
 AUTOEXIT: bool = envbool("NVIM_GHOST_AUTO_EXIT")
 SUPER_QUIET: bool = envbool("NVIM_GHOST_SUPER_QUIET")
 LOGGING_ENABLED: bool = envbool("NVIM_GHOST_LOGGING_ENABLED")
@@ -49,7 +88,7 @@ NVIM_ADDRESSES = [FOCUSED_NVIM_ADDRESS] if FOCUSED_NVIM_ADDRESS is not None else
 SERVER_PORT: str = os.environ.get("GHOSTTEXT_SERVER_PORT", "4001")
 if not SERVER_PORT.isdigit():
     if FOCUSED_NVIM_ADDRESS is not None:
-        with pynvim.attach("socket", path=FOCUSED_NVIM_ADDRESS) as nvim_handle:
+        with attach_to_nvim(FOCUSED_NVIM_ADDRESS) as nvim_handle:
             if not SUPER_QUIET:
                 nvim_handle.command(
                     "echom '[nvim-ghost] Invalid port. "
@@ -340,7 +379,7 @@ class GhostWebSocket(WebSocket):
         # Create and setup the buffer
         global FOCUSED_NVIM_ADDRESS
         self.neovim_address = FOCUSED_NVIM_ADDRESS
-        self.neovim_handle = pynvim.attach("socket", path=self.neovim_address)
+        self.neovim_handle = attach_to_nvim(self.neovim_address)
         self.buffer_handle = self.neovim_handle.api.create_buf(False, True)
         self.neovim_handle.api.buf_set_option(self.buffer_handle, "bufhidden", "wipe")
         self.neovim_handle.command(f"tabe | {self.buffer_handle.number}buffer")
@@ -385,7 +424,7 @@ class GhostWebSocket(WebSocket):
         threading.Thread(target=self._neovim_listener, daemon=True).start()
 
     def _neovim_listener(self):
-        self.loop_neovim_handle = pynvim.attach("socket", path=self.neovim_address)
+        self.loop_neovim_handle = attach_to_nvim(self.neovim_address)
         self.loop_neovim_handle.subscribe("nvim_buf_lines_event")
         self.loop_neovim_handle.subscribe("nvim_buf_detach_event")
         self.loop_neovim_handle.subscribe("nvim_ghost_exit_event")  # neovim is exiting
@@ -517,7 +556,7 @@ servers.http_server_thread.start()
 servers.websocket_server_thread.start()
 print("Servers started")
 if FOCUSED_NVIM_ADDRESS is not None:
-    with pynvim.attach("socket", path=FOCUSED_NVIM_ADDRESS) as nvim_handle:
+    with attach_to_nvim(FOCUSED_NVIM_ADDRESS) as nvim_handle:
         if not SUPER_QUIET:
             nvim_handle.command("echom '[nvim-ghost] Servers started'")
 
