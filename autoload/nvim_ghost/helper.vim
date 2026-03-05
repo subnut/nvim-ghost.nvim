@@ -80,18 +80,16 @@ function! s:send_GET_request(url) abort "{{{1
 endfunction
 
 function! nvim_ghost#helper#start_server() abort " {{{1
-  if has('win32')
+  if g:nvim_ghost_use_script
+    call jobstart(
+          \[g:nvim_ghost_python_executable, g:nvim_ghost_script_path],
+          \s:joblog_arguments_nokill
+          \)
+  elseif has('win32')
     call jobstart(['cscript.exe',
           \g:nvim_ghost_scripts_dir . 'start_server.vbs'])
   else
-    if g:nvim_ghost_use_script
-      call jobstart(
-            \[g:nvim_ghost_python_executable, g:nvim_ghost_script_path],
-            \s:joblog_arguments_nokill
-            \)
-    else
       call jobstart([g:nvim_ghost_binary_path], s:joblog_arguments_nokill)
-    endif
   endif
 endfunction
 
