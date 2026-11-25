@@ -25,7 +25,7 @@ let g:nvim_ghost_script_path = g:nvim_ghost_installation_dir .. 'binary.py'
 let g:nvim_ghost_binary_path = g:nvim_ghost_installation_dir .. 'nvim-ghost-binary' .. (has('win32') ? '.exe' : '')
 
 " Setup environment
-let $NVIM_LISTEN_ADDRESS        = v:servername
+let $NVIM_GHOST_LISTEN_ADDRESS  = v:servername
 let $NVIM_GHOST_AUTO_EXIT       = !g:nvim_ghost_autostart
 let $NVIM_GHOST_SUPER_QUIET     = g:nvim_ghost_super_quiet
 let $NVIM_GHOST_LOGGING_ENABLED = g:nvim_ghost_logging_enabled

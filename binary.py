@@ -43,7 +43,7 @@ SUPER_QUIET: bool = envbool("NVIM_GHOST_SUPER_QUIET")
 LOGGING_ENABLED: bool = envbool("NVIM_GHOST_LOGGING_ENABLED")
 VERBOSE_LOGGING: bool = envbool("NVIM_GHOST_VERBOSE_LOGGING")
 
-FOCUSED_NVIM_ADDRESS = os.environ.get("NVIM_LISTEN_ADDRESS", None)
+FOCUSED_NVIM_ADDRESS = os.environ.get("NVIM_GHOST_LISTEN_ADDRESS", None)
 NVIM_ADDRESSES = [FOCUSED_NVIM_ADDRESS] if FOCUSED_NVIM_ADDRESS is not None else []
 
 SERVER_PORT: str = os.environ.get("GHOSTTEXT_SERVER_PORT", "4001")
@@ -511,7 +511,7 @@ if LOGGING_ENABLED:
     sys.stdout = open("stdout.log", "w", buffering=1)
     sys.stderr = open("stderr.log", "w", buffering=1)
     print(time.strftime("%A, %d %B %Y, %H:%M:%S"))
-    print(f"$NVIM_LISTEN_ADDRESS: {FOCUSED_NVIM_ADDRESS}")
+    print(f"$NVIM_GHOST_LISTEN_ADDRESS: {FOCUSED_NVIM_ADDRESS}")
     print(f"binary {BUILD_VERSION}")
 servers.http_server_thread.start()
 servers.websocket_server_thread.start()
